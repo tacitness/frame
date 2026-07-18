@@ -6,6 +6,7 @@ import os
 import secrets
 import signal
 import socket
+import stat
 import subprocess
 import tempfile
 import time
@@ -32,8 +33,16 @@ class FrameServer:
 
     @staticmethod
     def _ensure_socket_directory() -> None:
-        SOCKET_DIRECTORY.mkdir(mode=0o1777, parents=True, exist_ok=True)
-        SOCKET_DIRECTORY.chmod(0o1777)
+        try:
+            SOCKET_DIRECTORY.mkdir(mode=0o1777)
+        except FileExistsError:
+            if not stat.S_ISDIR(SOCKET_DIRECTORY.lstat().st_mode):
+                raise RuntimeError(
+                    f"X11 socket path is not a directory: {SOCKET_DIRECTORY}"
+                ) from None
+        else:
+            # mkdir honors the process umask; only chmod a directory we created.
+            SOCKET_DIRECTORY.chmod(0o1777)
 
     @staticmethod
     def _available_display(excluded: set[int] | None = None) -> int:
