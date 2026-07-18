@@ -1,0 +1,42 @@
+name: SonarQube
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarqube-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: Frame Assembly Gate
+    if: vars.FRAME_SELF_HOSTED_ENABLED == 'true' && vars.SONARQUBE_ENABLED == 'true'
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - frame-ci-build
+    environment: sonarqube
+    timeout-minutes: 20
+    steps:
+      - name: Check out trusted source without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          clean: true
+
+      - name: Verify scanner and assembly toolchain
+        run: scripts/check-toolchain.sh sonarqube
+
+      - name: Generate external issues and wait for the gate
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: make sonar VERSION="$(scripts/version.sh current)"

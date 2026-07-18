@@ -1,0 +1,4 @@
+# Only canonical public fixtures and the rule-definition file are exempt.
+^([0-9a-f]{40}:)?\.git-secrets-patterns:
+AKIAIOSFODNN7EXAMPLE
+wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY

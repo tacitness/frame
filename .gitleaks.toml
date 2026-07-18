@@ -1,0 +1,14 @@
+title = "frame secret scanning policy"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Only canonical public fixtures may be exempted; never allowlist a credential-bearing path."
+paths = [
+  '''^tests/fixtures/README\.md$''',
+]
+regexes = [
+  '''^AKIAIOSFODNN7EXAMPLE$''',
+  '''^wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY$''',
+]

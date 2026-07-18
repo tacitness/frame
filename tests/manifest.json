@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "automatedSafety": {
+    "root": false,
+    "drm": false,
+    "evdev": false,
+    "liveDisplay": false,
+    "containerSocket": false,
+    "requiredFlags": ["--noinput"],
+    "temporaryHome": true
+  },
+  "suites": [
+    {"name":"unit","command":"make test-unit","status":"implemented","hardware":false},
+    {"name":"static-elf","command":"make test-static","status":"implemented","hardware":false},
+    {"name":"headless-integration","command":"make test-integration","status":"implemented","hardware":false},
+    {"name":"regression","command":"make test-regression","status":"implemented","hardware":false},
+    {"name":"bounded-fuzz-corpus","command":"make test-fuzz","status":"implemented","hardware":false},
+    {"name":"reproducibility","command":"make test-reproducible","status":"implemented","hardware":false},
+    {"name":"protocol-differential","command":null,"status":"planned","hardware":false},
+    {"name":"per-opcode-length-errors","command":null,"status":"planned","hardware":false},
+    {"name":"resource-disconnect-reuse","command":null,"status":"planned","hardware":false},
+    {"name":"slow-client-fairness","command":null,"status":"planned","hardware":false},
+    {"name":"manual-hardware","command":null,"status":"manual","hardware":true}
+  ]
+}

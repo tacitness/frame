@@ -1,0 +1,38 @@
+name: Trusted self-hosted CI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trusted-quality:
+    name: Trusted runner quality and security
+    if: vars.FRAME_SELF_HOSTED_ENABLED == 'true'
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - frame-ci-build
+    timeout-minutes: 35
+    steps:
+      - name: Check out trusted source without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+
+      - name: Verify immutable runner tool contract
+        shell: bash
+        run: scripts/check-toolchain.sh self-hosted
+
+      - name: Run trusted read-only and scanner gates
+        run: make ci-self-hosted

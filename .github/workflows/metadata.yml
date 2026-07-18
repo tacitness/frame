@@ -1,0 +1,77 @@
+name: Metadata
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - labeled
+      - unlabeled
+      - milestoned
+      - demilestoned
+      - reopened
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  issue-metadata:
+    name: Issue metadata
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out trusted policy
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Validate title, taxonomy, epic, and milestone metadata
+        run: python3 scripts/validate-metadata.py --event "$GITHUB_EVENT_PATH"
+
+  pr-title:
+    name: PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out policy from the trusted base commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Validate Conventional Commit title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f scripts/validate-metadata.py && -f ops/github/policy.json ]]; then
+            python3 scripts/validate-metadata.py --pr-title "$PR_TITLE"
+            exit 0
+          fi
+
+          # The policy-introduction PR has no validator on its trusted base.
+          # Keep that one bootstrap path read-only and validate the same title
+          # contract inline. After this workflow lands, only trusted-base policy
+          # reaches the branch above.
+          python3 - "$PR_TITLE" <<'PY'
+          import re
+          import sys
+
+          title = sys.argv[1]
+          pattern = r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+"
+          if not re.fullmatch(pattern, title) or len(title) > 72:
+              raise SystemExit("bootstrap PR title must be a Conventional Commit of at most 72 characters")
+          print("Bootstrap PR title policy passed")
+          PY

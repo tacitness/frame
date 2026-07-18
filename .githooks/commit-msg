@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+scripts/git-secrets-scan.sh message "$1"
+exec scripts/check-commit-message.sh "$1"

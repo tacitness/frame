@@ -1,0 +1,28 @@
+changelog:
+  exclude:
+    labels:
+      - release:none
+      - duplicate
+      - invalid
+      - wontfix
+  categories:
+    - title: Breaking changes
+      labels:
+        - release:major
+    - title: Features
+      labels:
+        - enhancement
+        - release:minor
+    - title: Fixes and security
+      labels:
+        - bug
+        - security
+    - title: Tests, delivery, and maintenance
+      labels:
+        - test
+        - ci
+        - tech-debt
+        - deps
+    - title: Documentation
+      labels:
+        - docs

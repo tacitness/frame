@@ -1,0 +1,86 @@
+name: Research Spike Specification
+description: Time-box protocol, implementation, compatibility, or performance research.
+title: "[area] "
+labels:
+  - spike
+  - p3
+  - needs-triage
+  - release:none
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        A spike produces evidence and a decision, not an open-ended implementation.
+  - type: textarea
+    id: repository
+    attributes:
+      label: Repository & System Clarity
+      placeholder: |
+        Repository: tacitness/frame
+        tsctl key: frame
+        System/subdomain:
+        Protocol/API authority:
+    validations:
+      required: true
+  - type: input
+    id: question
+    attributes:
+      label: Decision this spike must unblock
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Existing System Audit
+      placeholder: |
+        frame routines inspected:
+        xorgproto/Xserver source inspected:
+        local reference chapters inspected:
+        current uncertainty:
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Testing Strategy
+      placeholder: |
+        Experiments/measurements:
+        Maximum effort:
+        Hardware or privilege boundaries:
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Implementation Constraints
+      placeholder: |
+        Time box:
+        Hardware/privilege boundary:
+        Data and disclosure boundary:
+        Explicit non-goals:
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Required evidence and exit criteria
+      placeholder: |
+        - [ ] Reproducible notes or benchmark data.
+        - [ ] Recommended option and rejected alternatives.
+        - [ ] Follow-up issues with acceptance criteria, or a documented no-change decision.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Related Issues & Blockers
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: I stated the decision, evidence standard, and stopping condition.
+          required: true

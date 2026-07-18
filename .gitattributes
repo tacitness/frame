@@ -1,0 +1,18 @@
+* text=auto eol=lf
+
+*.asm text diff
+*.md text diff=markdown
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.svg text
+*.pdf binary
+*.tar binary
+*.tar.gz binary
+*.spdx.json text
+*.cdx.json text

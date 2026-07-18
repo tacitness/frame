@@ -1,0 +1,26 @@
+[
+  {
+    "title": "v0.1.0 - Safety and conformance foundation",
+    "description": "Release goal: deterministic build, layered headless tests, security gates, SonarQube external assembly policy, and documented X11 setup/core-protocol baseline. Epics E01-E03."
+  },
+  {
+    "title": "v0.2.0 - Core protocol completeness",
+    "description": "Release goal: validated core requests, resource ownership/lifetime, multi-client isolation, errors, selections, and regression coverage. Epics E04-E05."
+  },
+  {
+    "title": "v0.3.0 - Rendering and compositing correctness",
+    "description": "Release goal: measured and protocol-conformant drawing, RENDER, damage, window backing, and compositor behavior. Epic E06."
+  },
+  {
+    "title": "v0.4.0 - Input, XKB, and extension interoperability",
+    "description": "Release goal: synthetic-input conformance, keyboard layouts, and supported extension interoperability without desktop regressions. Epics E07-E08."
+  },
+  {
+    "title": "v0.5.0 - Hardware backend reliability",
+    "description": "Release goal: separately gated DRM/KMS and evdev behavior with recovery, hotplug, device-loss, and manual hardware evidence. Epic E09."
+  },
+  {
+    "title": "v1.0.0 - Desktop compatibility",
+    "description": "Release goal: documented compatibility target, stable security model, performance budgets, and representative desktop/client acceptance evidence. Epic E10."
+  }
+]

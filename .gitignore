@@ -1,4 +1,25 @@
-frame
-frame.o
+# Native build outputs
+/frame
+/frame.o
+
+# Release and scanner outputs
+/dist/
+/out/
+/*.sarif
+
+# Editor and OS noise
 *.swp
+*.swo
+*~
+.DS_Store
+.idea/
+.vscode/*.log
+
+# Python test/tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Legacy local test output
 /test/
