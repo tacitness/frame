@@ -17,8 +17,8 @@
 ; Display number: argv[1] (default 7). Pick something unused so this
 ; can coexist with a running Xorg on :0.
 ;
-; Build: nasm -f elf64 frame.asm -o frame.o && ld frame.o -o frame
-; Run:   ./frame                # uses display :7
+; Build: make
+; Run:   ./frame 7 --noinput    # safe headless mode on display :7
 ;        DISPLAY=:7 xeyes       # connect a test client
 ; ============================================================================
 
@@ -289,6 +289,7 @@ envp:               resq 1
 listen_fd:          resq 1
 client_fd:          resq 1
 display_num:        resq 1
+socket_bound:       resb 1                 ; this process owns sockaddr_path
 keymap_is_no:       resb 1                 ; ~/.framerc keymap=no → Norwegian
 pending_vt:         resd 1                 ; Ctrl+Alt+Fn target VT for switch_vt
 mouse_sens:         resd 1                 ; pointer sensitivity %, ~/.framerc (def 100)
@@ -1103,7 +1104,7 @@ log_request_mid:    db " len=", 0
 log_request_nl:     db 10
 log_client_gone:    db "client disconnected", 10
 log_client_gone_len equ $ - log_client_gone
-log_bind_fail:      db "frame: bind failed (display in use?)", 10
+log_bind_fail:      db "frame: bind failed (display in use or stale socket?)", 10
 log_bind_fail_len  equ $ - log_bind_fail
 log_setup_bad:      db "frame: malformed setup request, hanging up", 10
 log_setup_bad_len  equ $ - log_setup_bad
@@ -1146,6 +1147,121 @@ color_names:
     db 6, "yellow"
     dd 0xFFFF00
     db 0
+; Core fixed font for ImageText8. Metrics match handle_query_font:
+; width 6, ascent 11, descent 2. Printable ASCII is embedded; other
+; byte values deliberately use DEFAULT_CHAR 0 until broader encodings land.
+; X.Org font-misc-misc 1.1.3 6x13.bdf: public domain, "Share and enjoy."
+; Source: https://www.x.org/releases/individual/font/font-misc-misc-1.1.3.tar.xz
+; Archive SHA-256: 79abe361f58bb21ade9f565898e486300ce1cc621d5285bec26e14b6a8618fed
+%define CORE_FONT_WIDTH       6
+%define CORE_FONT_HEIGHT      13
+%define CORE_FONT_ASCENT      11
+%define CORE_FONT_DESCENT     2
+%define CORE_FONT_ASCII_FIRST 32
+%define CORE_FONT_ASCII_LAST  126
+align 4
+core_font_6x13_default:
+    db 0x00, 0x00, 0xA8, 0x00, 0x88, 0x00, 0x88, 0x00, 0x88, 0x00, 0xA8, 0x00, 0x00 ; DEFAULT_CHAR 0
+core_font_6x13_ascii:
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x20 space
+    db 0x00, 0x00, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x20, 0x00, 0x00 ; 0x21 exclam
+    db 0x00, 0x00, 0x50, 0x50, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x22 quotedbl
+    db 0x00, 0x00, 0x00, 0x50, 0x50, 0xF8, 0x50, 0xF8, 0x50, 0x50, 0x00, 0x00, 0x00 ; 0x23 numbersign
+    db 0x00, 0x00, 0x20, 0x78, 0xA0, 0xA0, 0x70, 0x28, 0x28, 0xF0, 0x20, 0x00, 0x00 ; 0x24 dollar
+    db 0x00, 0x00, 0x48, 0xA8, 0x50, 0x10, 0x20, 0x40, 0x50, 0xA8, 0x90, 0x00, 0x00 ; 0x25 percent
+    db 0x00, 0x00, 0x00, 0x40, 0xA0, 0xA0, 0x40, 0xA0, 0x98, 0x90, 0x68, 0x00, 0x00 ; 0x26 ampersand
+    db 0x00, 0x00, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x27 quotesingle
+    db 0x00, 0x10, 0x20, 0x20, 0x40, 0x40, 0x40, 0x40, 0x40, 0x20, 0x20, 0x10, 0x00 ; 0x28 parenleft
+    db 0x00, 0x40, 0x20, 0x20, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20, 0x20, 0x40, 0x00 ; 0x29 parenright
+    db 0x00, 0x00, 0x20, 0xA8, 0x70, 0xA8, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x2A asterisk
+    db 0x00, 0x00, 0x00, 0x00, 0x20, 0x20, 0xF8, 0x20, 0x20, 0x00, 0x00, 0x00, 0x00 ; 0x2B plus
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x20, 0x40, 0x00 ; 0x2C comma
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x2D hyphen
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x70, 0x20, 0x00 ; 0x2E period
+    db 0x00, 0x00, 0x08, 0x08, 0x10, 0x10, 0x20, 0x40, 0x40, 0x80, 0x80, 0x00, 0x00 ; 0x2F slash
+    db 0x00, 0x00, 0x20, 0x50, 0x88, 0x88, 0x88, 0x88, 0x88, 0x50, 0x20, 0x00, 0x00 ; 0x30 zero
+    db 0x00, 0x00, 0x20, 0x60, 0xA0, 0x20, 0x20, 0x20, 0x20, 0x20, 0xF8, 0x00, 0x00 ; 0x31 one
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x08, 0x10, 0x20, 0x40, 0x80, 0xF8, 0x00, 0x00 ; 0x32 two
+    db 0x00, 0x00, 0xF8, 0x08, 0x10, 0x20, 0x70, 0x08, 0x08, 0x88, 0x70, 0x00, 0x00 ; 0x33 three
+    db 0x00, 0x00, 0x10, 0x10, 0x30, 0x50, 0x50, 0x90, 0xF8, 0x10, 0x10, 0x00, 0x00 ; 0x34 four
+    db 0x00, 0x00, 0xF8, 0x80, 0x80, 0xB0, 0xC8, 0x08, 0x08, 0x88, 0x70, 0x00, 0x00 ; 0x35 five
+    db 0x00, 0x00, 0x70, 0x88, 0x80, 0x80, 0xF0, 0x88, 0x88, 0x88, 0x70, 0x00, 0x00 ; 0x36 six
+    db 0x00, 0x00, 0xF8, 0x08, 0x10, 0x10, 0x20, 0x20, 0x40, 0x40, 0x40, 0x00, 0x00 ; 0x37 seven
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x88, 0x70, 0x88, 0x88, 0x88, 0x70, 0x00, 0x00 ; 0x38 eight
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x88, 0x78, 0x08, 0x08, 0x88, 0x70, 0x00, 0x00 ; 0x39 nine
+    db 0x00, 0x00, 0x00, 0x00, 0x20, 0x70, 0x20, 0x00, 0x00, 0x20, 0x70, 0x20, 0x00 ; 0x3A colon
+    db 0x00, 0x00, 0x00, 0x00, 0x20, 0x70, 0x20, 0x00, 0x00, 0x30, 0x20, 0x40, 0x00 ; 0x3B semicolon
+    db 0x00, 0x00, 0x08, 0x10, 0x20, 0x40, 0x80, 0x40, 0x20, 0x10, 0x08, 0x00, 0x00 ; 0x3C less
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0x00, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00 ; 0x3D equal
+    db 0x00, 0x00, 0x80, 0x40, 0x20, 0x10, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0x00 ; 0x3E greater
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x08, 0x10, 0x20, 0x20, 0x00, 0x20, 0x00, 0x00 ; 0x3F question
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x98, 0xA8, 0xA8, 0xB0, 0x80, 0x78, 0x00, 0x00 ; 0x40 at
+    db 0x00, 0x00, 0x20, 0x50, 0x88, 0x88, 0x88, 0xF8, 0x88, 0x88, 0x88, 0x00, 0x00 ; 0x41 A
+    db 0x00, 0x00, 0xF0, 0x48, 0x48, 0x48, 0x70, 0x48, 0x48, 0x48, 0xF0, 0x00, 0x00 ; 0x42 B
+    db 0x00, 0x00, 0x70, 0x88, 0x80, 0x80, 0x80, 0x80, 0x80, 0x88, 0x70, 0x00, 0x00 ; 0x43 C
+    db 0x00, 0x00, 0xF0, 0x48, 0x48, 0x48, 0x48, 0x48, 0x48, 0x48, 0xF0, 0x00, 0x00 ; 0x44 D
+    db 0x00, 0x00, 0xF8, 0x80, 0x80, 0x80, 0xF0, 0x80, 0x80, 0x80, 0xF8, 0x00, 0x00 ; 0x45 E
+    db 0x00, 0x00, 0xF8, 0x80, 0x80, 0x80, 0xF0, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00 ; 0x46 F
+    db 0x00, 0x00, 0x70, 0x88, 0x80, 0x80, 0x80, 0x98, 0x88, 0x88, 0x70, 0x00, 0x00 ; 0x47 G
+    db 0x00, 0x00, 0x88, 0x88, 0x88, 0x88, 0xF8, 0x88, 0x88, 0x88, 0x88, 0x00, 0x00 ; 0x48 H
+    db 0x00, 0x00, 0x70, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x70, 0x00, 0x00 ; 0x49 I
+    db 0x00, 0x00, 0x38, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x90, 0x60, 0x00, 0x00 ; 0x4A J
+    db 0x00, 0x00, 0x88, 0x88, 0x90, 0xA0, 0xC0, 0xA0, 0x90, 0x88, 0x88, 0x00, 0x00 ; 0x4B K
+    db 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0xF8, 0x00, 0x00 ; 0x4C L
+    db 0x00, 0x00, 0x88, 0x88, 0xD8, 0xA8, 0xA8, 0x88, 0x88, 0x88, 0x88, 0x00, 0x00 ; 0x4D M
+    db 0x00, 0x00, 0x88, 0xC8, 0xC8, 0xA8, 0xA8, 0x98, 0x98, 0x88, 0x88, 0x00, 0x00 ; 0x4E N
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x70, 0x00, 0x00 ; 0x4F O
+    db 0x00, 0x00, 0xF0, 0x88, 0x88, 0x88, 0xF0, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00 ; 0x50 P
+    db 0x00, 0x00, 0x70, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0xA8, 0x70, 0x08, 0x00 ; 0x51 Q
+    db 0x00, 0x00, 0xF0, 0x88, 0x88, 0x88, 0xF0, 0xA0, 0x90, 0x88, 0x88, 0x00, 0x00 ; 0x52 R
+    db 0x00, 0x00, 0x70, 0x88, 0x80, 0x80, 0x70, 0x08, 0x08, 0x88, 0x70, 0x00, 0x00 ; 0x53 S
+    db 0x00, 0x00, 0xF8, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00 ; 0x54 T
+    db 0x00, 0x00, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x70, 0x00, 0x00 ; 0x55 U
+    db 0x00, 0x00, 0x88, 0x88, 0x88, 0x88, 0x50, 0x50, 0x50, 0x20, 0x20, 0x00, 0x00 ; 0x56 V
+    db 0x00, 0x00, 0x88, 0x88, 0x88, 0x88, 0xA8, 0xA8, 0xA8, 0xA8, 0x50, 0x00, 0x00 ; 0x57 W
+    db 0x00, 0x00, 0x88, 0x88, 0x50, 0x50, 0x20, 0x50, 0x50, 0x88, 0x88, 0x00, 0x00 ; 0x58 X
+    db 0x00, 0x00, 0x88, 0x88, 0x50, 0x50, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00 ; 0x59 Y
+    db 0x00, 0x00, 0xF8, 0x08, 0x10, 0x10, 0x20, 0x40, 0x40, 0x80, 0xF8, 0x00, 0x00 ; 0x5A Z
+    db 0x00, 0x70, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x70, 0x00 ; 0x5B bracketleft
+    db 0x00, 0x00, 0x80, 0x80, 0x40, 0x40, 0x20, 0x10, 0x10, 0x08, 0x08, 0x00, 0x00 ; 0x5C backslash
+    db 0x00, 0x70, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x70, 0x00 ; 0x5D bracketright
+    db 0x00, 0x00, 0x20, 0x50, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x5E asciicircum
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0x00 ; 0x5F underscore
+    db 0x00, 0x20, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x60 grave
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x08, 0x78, 0x88, 0x98, 0x68, 0x00, 0x00 ; 0x61 a
+    db 0x00, 0x00, 0x80, 0x80, 0x80, 0xF0, 0x88, 0x88, 0x88, 0x88, 0xF0, 0x00, 0x00 ; 0x62 b
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x88, 0x80, 0x80, 0x88, 0x70, 0x00, 0x00 ; 0x63 c
+    db 0x00, 0x00, 0x08, 0x08, 0x08, 0x78, 0x88, 0x88, 0x88, 0x88, 0x78, 0x00, 0x00 ; 0x64 d
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x88, 0xF8, 0x80, 0x88, 0x70, 0x00, 0x00 ; 0x65 e
+    db 0x00, 0x00, 0x30, 0x48, 0x40, 0x40, 0xF0, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00 ; 0x66 f
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x88, 0x88, 0x88, 0x78, 0x08, 0x88, 0x70 ; 0x67 g
+    db 0x00, 0x00, 0x80, 0x80, 0x80, 0xB0, 0xC8, 0x88, 0x88, 0x88, 0x88, 0x00, 0x00 ; 0x68 h
+    db 0x00, 0x00, 0x00, 0x20, 0x00, 0x60, 0x20, 0x20, 0x20, 0x20, 0x70, 0x00, 0x00 ; 0x69 i
+    db 0x00, 0x00, 0x00, 0x10, 0x00, 0x30, 0x10, 0x10, 0x10, 0x10, 0x90, 0x90, 0x60 ; 0x6A j
+    db 0x00, 0x00, 0x80, 0x80, 0x80, 0x90, 0xA0, 0xC0, 0xA0, 0x90, 0x88, 0x00, 0x00 ; 0x6B k
+    db 0x00, 0x00, 0x60, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x70, 0x00, 0x00 ; 0x6C l
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0xD0, 0xA8, 0xA8, 0xA8, 0xA8, 0x88, 0x00, 0x00 ; 0x6D m
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0, 0xC8, 0x88, 0x88, 0x88, 0x88, 0x00, 0x00 ; 0x6E n
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x88, 0x88, 0x88, 0x88, 0x70, 0x00, 0x00 ; 0x6F o
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x88, 0x88, 0x88, 0xF0, 0x80, 0x80, 0x80 ; 0x70 p
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0x88, 0x88, 0x88, 0x78, 0x08, 0x08, 0x08 ; 0x71 q
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0xB0, 0xC8, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00 ; 0x72 r
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x88, 0x60, 0x10, 0x88, 0x70, 0x00, 0x00 ; 0x73 s
+    db 0x00, 0x00, 0x00, 0x40, 0x40, 0xF0, 0x40, 0x40, 0x40, 0x48, 0x30, 0x00, 0x00 ; 0x74 t
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88, 0x88, 0x88, 0x98, 0x68, 0x00, 0x00 ; 0x75 u
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88, 0x88, 0x50, 0x50, 0x20, 0x00, 0x00 ; 0x76 v
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88, 0xA8, 0xA8, 0xA8, 0x50, 0x00, 0x00 ; 0x77 w
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x50, 0x20, 0x20, 0x50, 0x88, 0x00, 0x00 ; 0x78 x
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88, 0x88, 0x98, 0x68, 0x08, 0x88, 0x70 ; 0x79 y
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0x10, 0x20, 0x40, 0x80, 0xF8, 0x00, 0x00 ; 0x7A z
+    db 0x00, 0x18, 0x20, 0x20, 0x20, 0x20, 0xC0, 0x20, 0x20, 0x20, 0x20, 0x18, 0x00 ; 0x7B braceleft
+    db 0x00, 0x00, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00 ; 0x7C bar
+    db 0x00, 0xC0, 0x20, 0x20, 0x20, 0x20, 0x18, 0x20, 0x20, 0x20, 0x20, 0xC0, 0x00 ; 0x7D braceright
+    db 0x00, 0x00, 0x48, 0xA8, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 0x7E asciitilde
+CORE_FONT_6X13_ASCII_BYTES equ $ - core_font_6x13_ascii
+%if CORE_FONT_6X13_ASCII_BYTES != ((CORE_FONT_ASCII_LAST - CORE_FONT_ASCII_FIRST + 1) * CORE_FONT_HEIGHT)
+    %error "core 6x13 font table must contain every printable ASCII glyph"
+%endif
 str_vtactive:       db "/sys/class/tty/tty0/active", 0
 log_comp_pre:       db "compositor: mode ", 0
 log_comp_pre_len    equ $ - log_comp_pre - 1
@@ -1259,7 +1375,7 @@ XKB_MODMAP_BYTES equ $ - xkb_modmap_blob
 ; keycode->RDP scancode); unique 'Knnn' fallback elsewhere (xkbcommon needs
 ; unique key identifiers). Generated from /usr/share/X11/xkb/keycodes/evdev.
 xkb_std_names:
-    db 75,48,48,56    ; kc 8 
+    db 75,48,48,56    ; kc 8
     db 69,83,67,0    ; kc 9 ESC
     db 65,69,48,49    ; kc 10 AE01
     db 65,69,48,50    ; kc 11 AE02
@@ -1901,7 +2017,6 @@ _start:
 .flag_fbtest_on:
     mov byte [fbtest_mode], 1
     jmp .flag_scan_next
-    jmp .flag_scan_next
 .flag_not_fbtest:
     cmp dword [rdi], '--no'                  ; --noinput: never open real evdev
     jne .flag_not_noinput                    ; (headless tests must not grab the
@@ -1938,10 +2053,19 @@ _start:
     jmp .flag_scan
 
 .main:
-    call announce_listening
     call socket_setup
     test rax, rax
     js .die_bind
+    call announce_listening
+    ; Every server mode owns a filesystem socket, not only the DRM
+    ; compositor. Install cleanup handlers immediately after bind succeeds so
+    ; SIGINT/SIGTERM/SIGHUP cannot strand /tmp/.X11-unix/X<N>.
+    mov edi, SIGINT
+    call install_exit_handler
+    mov edi, SIGTERM
+    call install_exit_handler
+    mov edi, SIGHUP
+    call install_exit_handler
     call init_atoms
     ; Claim the compositor-manager selection: glass (and GTK) only use the
     ; ARGB visual for real transparency when _NET_WM_CM_S0 has an owner.
@@ -2058,11 +2182,14 @@ announce_listening:
 
 ; ============================================================================
 ; socket_setup — socket(AF_UNIX, SOCK_STREAM), bind to /tmp/.X11-unix/X<N>,
-; listen. Returns 0 on success, -1 on failure (after writing the unlink so
-; subsequent runs aren't poisoned by a stale lock).
+; listen. Returns 0 on success, -1 on failure after closing any partially
+; created listener and unlinking the path only when this process bound it.
+; An existing path is never pre-unlinked: it may belong to a live server.
 ; ============================================================================
 socket_setup:
     push rbx
+    mov qword [listen_fd], -1
+    mov byte [socket_bound], 0
     ; Build the path string into sockaddr_path so we can also pass it to
     ; unlink() later. Format: "/tmp/.X11-unix/X" + display_num + NUL.
     lea rdi, [sockaddr_path]
@@ -2083,11 +2210,6 @@ socket_setup:
     lea rcx, [sockaddr_path]
     sub rax, rcx
     mov [sockaddr_pathlen], rax
-
-    ; Pre-unlink any stale socket file from a previous run. Ignore errors.
-    mov rax, SYS_UNLINK
-    lea rdi, [sockaddr_path]
-    syscall
 
     ; socket(AF_UNIX, SOCK_STREAM, 0)
     mov rax, SYS_SOCKET
@@ -2125,22 +2247,42 @@ socket_setup:
     syscall
     test rax, rax
     js .ss_fail
-    ; Make the socket world-connectable (0777), like every real X server, so
-    ; clients running as a different user (e.g. tray apps as the real user
-    ; while frame runs as root) can connect. /tmp/.X11-unix is already sticky.
+    mov byte [socket_bound], 1
+    ; The setup auth fields are framed but not yet validated, so restrict the
+    ; socket to frame's uid. Cross-user sessions must wait for a complete
+    ; MIT-MAGIC-COOKIE-1 or verified-peer-credential design; running frame as
+    ; root merely to make clients connect is intentionally unsupported.
     mov rax, 90                          ; SYS_CHMOD
     lea rdi, [sockaddr_buf + 2]          ; sun_path
-    mov esi, 0o777
+    mov esi, 0o700
     syscall
+    test rax, rax
+    js .ss_fail
     ; listen with a small backlog
     mov rax, SYS_LISTEN
     mov rdi, [listen_fd]
     mov rsi, 8
     syscall
+    test rax, rax
+    js .ss_fail
     xor eax, eax
     pop rbx
     ret
 .ss_fail:
+    mov rdi, [listen_fd]
+    test rdi, rdi
+    js .ss_fail_unlink
+    mov qword [listen_fd], -1
+    mov rax, SYS_CLOSE
+    syscall
+.ss_fail_unlink:
+    cmp byte [socket_bound], 1
+    jne .ss_fail_done
+    mov byte [socket_bound], 0
+    mov rax, SYS_UNLINK
+    lea rdi, [sockaddr_path]
+    syscall
+.ss_fail_done:
     mov rax, -1
     pop rbx
     ret
@@ -4204,6 +4346,30 @@ client_buf_addr:
     ret
 
 ; ----------------------------------------------------------------------------
+; blocking_write_all — edi = blocking client fd, rsi = buffer, rdx = bytes.
+; Completes a reply across short writes and retries EINTR. Replies are
+; request-driven and therefore deliberately blocking; unlike EV_SEND they
+; must never be truncated because that would desynchronise the X11 stream.
+; Returns after all bytes are written or the client socket fails.
+; Clobbers rax, rcx, rsi, rdx, r11; preserves all other registers.
+; ----------------------------------------------------------------------------
+blocking_write_all:
+    test rdx, rdx
+    jz .bwa_done
+.bwa_write:
+    mov eax, SYS_WRITE
+    syscall
+    cmp rax, -4                              ; EINTR
+    je .bwa_write
+    test rax, rax
+    jle .bwa_done                            ; closed or failed client
+    add rsi, rax
+    sub rdx, rax
+    jnz .bwa_write
+.bwa_done:
+    ret
+
+; ----------------------------------------------------------------------------
 ; init_atoms — walk predef_atom_stream, populating atom_off[] / atom_len[]
 ; / atom_strings. Predefined atoms get IDs 1..68; atom_count is left
 ; pointing at the next free ID (69). Atom 0 = None and is never used.
@@ -4879,6 +5045,8 @@ dispatch_request:
     je .dr_reparent_window
     cmp eax, 8
     je .dr_map_window
+    cmp eax, 9
+    je .dr_map_subwindows
     cmp eax, 10
     je .dr_unmap_window
     cmp eax, 12
@@ -4905,6 +5073,10 @@ dispatch_request:
     je .dr_poly_fill_rectangle
     cmp eax, 72
     je .dr_put_image
+    cmp eax, 74
+    je .dr_poly_text8
+    cmp eax, 76
+    je .dr_image_text8
     cmp eax, 73
     je .dr_get_image
     cmp eax, 83
@@ -4949,6 +5121,8 @@ dispatch_request:
     je .dr_alloc_color                       ; reply-carrying; scrot -s blocks
     cmp eax, 85                              ; on 'gray' for its rubber band
     je .dr_alloc_named_color
+    cmp eax, 91
+    je .dr_query_colors
     cmp eax, 38
     je .dr_query_pointer
     cmp eax, 40
@@ -5178,6 +5352,20 @@ dispatch_request:
     call handle_put_image
     jmp .dr_done
 
+.dr_poly_text8:
+    mov edi, ebx
+    mov rsi, r12
+    mov edx, r13d
+    call handle_poly_text8
+    jmp .dr_done
+
+.dr_image_text8:
+    mov edi, ebx
+    mov rsi, r12
+    mov edx, r13d
+    call handle_image_text8
+    jmp .dr_done
+
 .dr_create_pixmap:
     mov rsi, r12
     call handle_create_pixmap
@@ -5253,6 +5441,13 @@ dispatch_request:
     mov edi, ebx
     mov rsi, r12
     call handle_alloc_named_color
+    jmp .dr_done
+
+.dr_query_colors:
+    mov edi, ebx
+    mov rsi, r12
+    mov edx, r13d
+    call handle_query_colors
     jmp .dr_done
 
 .dr_list_extensions:
@@ -5385,6 +5580,13 @@ dispatch_request:
     mov edi, ebx
     mov rsi, r12
     call handle_map_window
+    jmp .dr_done
+
+.dr_map_subwindows:
+    mov edi, ebx
+    mov rsi, r12
+    mov edx, r13d
+    call handle_map_subwindows
     jmp .dr_done
 
 .dr_unmap_window:
@@ -8886,6 +9088,109 @@ handle_alloc_color:
     pop rbx
     ret
 
+; ----------------------------------------------------------------------------
+; handle_query_colors — edi = slot, rsi = req ptr, edx = req bytes.
+; Core QueryColors (opcode 91): cmap@4, pixels[]@8. frame exposes one
+; TrueColor visual, so each 0x00RRGGBB pixel deterministically expands to an
+; xrgb record with 16-bit channels (channel * 0x0101). The colormap id is
+; decorative, matching the existing TrueColor AllocColor policy.
+;
+; The 32-byte reply header is followed by eight bytes per pixel. Records are
+; generated in reply_buf-sized batches so a legal reply may exceed 16 KiB;
+; blocking_write_all prevents short writes from desynchronising the client.
+; Malformed requests are ignored without reading beyond their framed bytes.
+; ----------------------------------------------------------------------------
+handle_query_colors:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    mov ebx, edi                             ; client slot
+    mov r12, rsi                             ; request
+    cmp edx, 8
+    jl .qc_done
+    mov r13d, edx
+    sub r13d, 8                              ; pixel payload bytes
+    test r13d, 3
+    jnz .qc_done
+    shr r13d, 2                              ; total pixel count
+    lea r14, [r12 + 8]                       ; pixel cursor
+
+    mov eax, ebx
+    call client_meta_addr
+    mov r15d, [rax]                          ; blocking client fd
+    mov edx, [rax + 8]                       ; sequence
+
+    lea rdi, [reply_buf]
+    xor eax, eax
+    mov ecx, 4
+    rep stosq                                ; clear 32-byte header
+    mov byte [reply_buf + 0], 1              ; reply
+    mov [reply_buf + 2], dx                  ; sequence
+    mov eax, r13d
+    shl eax, 1                               ; 2 protocol words / xrgb
+    mov [reply_buf + 4], eax
+    mov [reply_buf + 8], r13w                ; nColors
+
+    mov edi, r15d
+    lea rsi, [reply_buf]
+    mov edx, 32
+    call blocking_write_all
+
+    mov ebx, r13d                            ; records remaining
+.qc_batch:
+    test ebx, ebx
+    jz .qc_done
+    mov ebp, ebx
+    cmp ebp, 2048                            ; 2048 * 8 = reply_buf capacity
+    jbe .qc_batch_size
+    mov ebp, 2048
+.qc_batch_size:
+    lea rdi, [reply_buf]
+    mov r10d, ebp
+.qc_record:
+    mov eax, [r14]
+    add r14, 4
+
+    mov ecx, eax                             ; red
+    shr ecx, 16
+    and ecx, 0xFF
+    imul ecx, ecx, 0x0101
+    mov [rdi + 0], cx
+
+    mov ecx, eax                             ; green
+    shr ecx, 8
+    and ecx, 0xFF
+    imul ecx, ecx, 0x0101
+    mov [rdi + 2], cx
+
+    and eax, 0xFF                            ; blue
+    imul eax, eax, 0x0101
+    mov [rdi + 4], ax
+    mov word [rdi + 6], 0
+
+    add rdi, 8
+    dec r10d
+    jnz .qc_record
+
+    mov edi, r15d
+    lea rsi, [reply_buf]
+    mov edx, ebp
+    shl edx, 3
+    call blocking_write_all
+    sub ebx, ebp
+    jmp .qc_batch
+.qc_done:
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
 ; handle_alloc_named_color — edi = slot, rsi = req. AllocNamedColor (85):
 ;   req: cmap@4, nameLen@8 (u16), name@12
 ;   reply: pixel@8, exactR/G/B@12,14,16, visualR/G/B@18,20,22
@@ -10408,6 +10713,71 @@ handle_map_window:
 .mw_done:
     call sync_pointer_window
     pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ============================================================================
+; handle_map_subwindows — edi = requester slot, rsi = req ptr,
+; edx = req bytes. Core MapSubwindows (opcode 9) maps every currently
+; unmapped direct child of parent@4. Each child is routed through the normal
+; MapWindow path, preserving redirect, notification, exposure, backing-store,
+; damage, and input-crossing behavior in one place.
+;
+; The flat window table allocates children in creation/stacking order. Walking
+; it oldest-to-newest maps bottom-to-top; handle_map_window's monotonic stack
+; assignment therefore leaves the newest child on top. Xorg delivers events
+; top-to-bottom without changing stack; frame reaches the same final visible
+; order while retaining its existing map-raises model.
+; ============================================================================
+handle_map_subwindows:
+    push rbx
+    push r12
+    push r13
+    sub rsp, 16
+    mov ebx, edi                             ; requester slot
+    cmp edx, 8
+    jne .msw_done
+    mov r12d, [rsi + 4]                      ; parent xid
+    mov edi, r12d
+    call window_lookup
+    test rax, rax
+    jnz .msw_scan_start
+    mov edi, ebx
+    mov esi, r12d
+    mov edx, 9
+    call send_bad_window
+    jmp .msw_done
+
+.msw_scan_start:
+    xor r13d, r13d                           ; window-table slot
+.msw_scan:
+    cmp r13d, MAX_WINDOWS
+    jge .msw_done
+    mov rax, r13
+    imul rax, WINDOW_REC_SIZE
+    lea rax, [windows + rax]
+    cmp dword [rax], 0
+    je .msw_next
+    cmp [rax + 4], r12d
+    jne .msw_next
+    cmp byte [rax + 28], 0
+    jne .msw_next
+
+    mov qword [rsp + 0], 0
+    mov byte [rsp + 0], 8                    ; synthetic MapWindow request
+    mov word [rsp + 2], 2
+    mov ecx, [rax]
+    mov [rsp + 4], ecx
+    mov edi, ebx
+    lea rsi, [rsp]
+    call handle_map_window
+.msw_next:
+    inc r13d
+    jmp .msw_scan
+.msw_done:
+    add rsp, 16
     pop r13
     pop r12
     pop rbx
@@ -12903,7 +13273,7 @@ dispatch_input_event:
     jne .die_nozap
     cmp r12d, 14                             ; Backspace → zap
     jne .die_chk_vt
-    call compositor_shutdown
+    call server_shutdown
     mov rax, SYS_EXIT
     xor edi, edi
     syscall
@@ -15692,15 +16062,6 @@ init_compositor:
     ; Bring up the hardware cursor sprite (non-fatal if unsupported).
     call init_hw_cursor
 
-    ; Install SIGINT / SIGTERM / SIGHUP handlers so Ctrl+C (or kill)
-    ; restores the console cleanly instead of leaving a black panel.
-    mov edi, SIGINT
-    call install_exit_handler
-    mov edi, SIGTERM
-    call install_exit_handler
-    mov edi, SIGHUP
-    call install_exit_handler
-
     ; Log what we got so we can verify mode/pitch/size after the fact.
     mov rsi, log_prefix
     mov rdx, 7
@@ -17858,13 +18219,12 @@ bg_fill_rect:
 
 ; ============================================================================
 ; ============================================================================
-; PHASE 4f — clean exit / console restore.
+; PHASE 4f — clean exit / server and console restore.
 ; ============================================================================
-; A compositor that holds DRM master must restore the console on exit,
-; or the panel keeps showing frame's (now freed) framebuffer — black,
-; recoverable only by a VT switch. We install handlers for SIGINT
-; (Ctrl+C), SIGTERM (kill / the test script's cleanup), and SIGHUP so
-; any of them runs compositor_shutdown before exiting.
+; Every mode must close and unlink its X11 socket. A compositor that holds
+; DRM master must additionally restore the console before exit, or the panel
+; keeps showing frame's freed framebuffer. SIGINT, SIGTERM, and SIGHUP all
+; enter the shared server_shutdown path.
 ; ============================================================================
 
 ; ----------------------------------------------------------------------------
@@ -18247,15 +18607,39 @@ sig_restorer:
     syscall
 
 ; ----------------------------------------------------------------------------
-; exit_handler — restore the console CRTC, drop DRM master, exit 0.
+; exit_handler — release server/console resources and exit 0.
 ; Async-signal context, but every call here is a raw syscall (all
 ; async-signal-safe) so this is fine.
 ; ----------------------------------------------------------------------------
 exit_handler:
-    call compositor_shutdown
+    call server_shutdown
     mov rax, SYS_EXIT
     xor edi, edi
     syscall
+
+; ----------------------------------------------------------------------------
+; server_shutdown — release the display and listening socket. Safe to call
+; repeatedly and safe from exit_handler: all work resolves to raw syscalls.
+; ----------------------------------------------------------------------------
+server_shutdown:
+    call compositor_shutdown
+    mov rdi, [listen_fd]
+    test rdi, rdi
+    js .srv_unlink
+    mov qword [listen_fd], -1
+    mov rax, SYS_CLOSE
+    syscall
+.srv_unlink:
+    cmp byte [socket_bound], 1
+    jne .srv_done
+    mov byte [socket_bound], 0
+    cmp byte [sockaddr_path], 0
+    je .srv_done
+    mov rax, SYS_UNLINK
+    lea rdi, [sockaddr_path]
+    syscall
+.srv_done:
+    ret
 
 ; ----------------------------------------------------------------------------
 ; switch_vt — edi = target VT number. Restore the console + drop DRM master,
@@ -18299,7 +18683,7 @@ switch_vt:
 .sv_done:
     ret
 .sv_legacy:
-    call compositor_shutdown
+    call server_shutdown
     call vt_console_open
     test rax, rax
     js .sv_exit
@@ -19332,6 +19716,376 @@ fb_fill:
     dec r10d
     jmp .fbf_row
 .fbf_ret:
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+
+; ----------------------------------------------------------------------------
+; handle_poly_text8 — edi = slot, rsi = req ptr, edx = req bytes.
+; Core PolyText8 (opcode 74): drawable@4, gc@8, baseline x/y@12/+14,
+; followed by xTextElt records. A normal record is len, signed delta, then
+; len STRING8 bytes; len 255 changes the font via a four-byte big-endian id.
+; frame consumes font changes but keeps its single fixed core font.
+;
+; Poly text is transparent: only foreground glyph bits are drawn. Every
+; element is bounds-validated in a first pass before drawing so malformed
+; lengths cannot read into the next request or partially mutate a drawable.
+; Up to two trailing protocol-pad bytes are ignored exactly as Xorg does; a
+; three-byte pad is a harmless zero-length, zero-delta element plus one byte.
+; ----------------------------------------------------------------------------
+handle_poly_text8:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    sub rsp, 64
+    mov r12, rsi                             ; request
+    mov qword [cur_clip], 0
+    cmp edx, 16
+    jl .pt_done
+
+    mov eax, edx
+    lea rax, [r12 + rax]
+    mov [rsp + 8], rax                       ; framed request end
+    lea rsi, [r12 + 16]
+.pt_validate:
+    mov rax, [rsp + 8]
+    sub rax, rsi                             ; bytes remaining
+    cmp rax, 2
+    jle .pt_valid
+    movzx ecx, byte [rsi]
+    cmp ecx, 255                             ; font shift: 1 + 4 bytes
+    jne .pt_validate_text
+    cmp rax, 5
+    jl .pt_done
+    add rsi, 5
+    jmp .pt_validate
+.pt_validate_text:
+    lea rcx, [rcx + 2]                       ; element header + chars
+    cmp rax, rcx
+    jl .pt_done
+    add rsi, rcx
+    jmp .pt_validate
+
+.pt_valid:
+    mov edi, [r12 + 8]
+    call gc_lookup
+    test rax, rax
+    jz .pt_done
+    mov ecx, [rax + 4]
+    mov [rsp + 0], ecx                       ; foreground
+    lea rcx, [gcs]
+    sub rax, rcx
+    shr rax, 4
+    imul rax, CLIP_ENTRY_SIZE
+    lea rcx, [gc_clips]
+    add rax, rcx
+    cmp dword [rax], 0
+    je .pt_clip_ready
+    mov [cur_clip], rax
+.pt_clip_ready:
+
+    mov edi, [r12 + 4]
+    call drawable_get_backing
+    test rax, rax
+    jz .pt_done
+    mov rbx, rax                             ; backing
+    mov r13d, edx                            ; stride / width
+    mov r14d, ecx                            ; height
+    movsx r15d, word [r12 + 12]              ; current x
+    movsx ebp, word [r12 + 14]
+    sub ebp, CORE_FONT_ASCENT                 ; top y
+    lea rax, [r12 + 16]
+    mov [rsp + 16], rax                      ; element cursor
+    mov dword [rsp + 24], 0x7FFFFFFF         ; minimum drawn x
+    mov dword [rsp + 28], 0x80000000         ; maximum drawn x
+    mov dword [rsp + 32], 0                  ; saw a non-empty run
+
+.pt_element:
+    mov rcx, [rsp + 16]
+    mov rax, [rsp + 8]
+    sub rax, rcx
+    cmp rax, 2
+    jle .pt_damage
+    movzx edx, byte [rcx]
+    cmp edx, 255
+    jne .pt_text_element
+    add rcx, 5                               ; fixed font: consume font shift
+    mov [rsp + 16], rcx
+    jmp .pt_element
+
+.pt_text_element:
+    movsx eax, byte [rcx + 1]
+    add r15d, eax                            ; signed element delta
+    lea r9, [rcx + 2]                        ; text bytes
+    lea rax, [rcx + rdx + 2]
+    mov [rsp + 16], rax                      ; next element before helper call
+    test edx, edx
+    jz .pt_element
+    mov r10d, edx                            ; character count
+    imul edx, CORE_FONT_WIDTH
+    mov [rsp + 36], edx                      ; run width
+    mov dword [rsp + 32], 1
+    cmp r15d, [rsp + 24]
+    jge .pt_min_ready
+    mov [rsp + 24], r15d
+.pt_min_ready:
+    mov eax, r15d
+    add eax, edx
+    cmp eax, [rsp + 28]
+    jle .pt_max_ready
+    mov [rsp + 28], eax
+.pt_max_ready:
+    mov rdi, rbx
+    mov esi, r13d
+    mov edx, r14d
+    mov eax, r15d
+    mov r8d, ebp
+    mov r11d, [rsp + 0]
+    call core_text8_draw_run
+    add r15d, [rsp + 36]                     ; glyph character-width advance
+    jmp .pt_element
+
+.pt_damage:
+    cmp dword [rsp + 32], 0
+    je .pt_done
+    mov edi, [r12 + 4]
+    call window_lookup
+    test rax, rax
+    jz .pt_done                              ; pixmap remains off-screen
+    mov byte [comp_dirty], 1
+    mov rdi, rax
+    mov eax, [rsp + 24]
+    mov edx, ebp
+    mov ecx, [rsp + 28]
+    sub ecx, eax
+    mov r8d, CORE_FONT_HEIGHT
+    call damage_add_local
+.pt_done:
+    mov qword [cur_clip], 0
+    add rsp, 64
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ----------------------------------------------------------------------------
+; handle_image_text8 — edi = slot, rsi = req ptr, edx = req bytes.
+; Core ImageText8 (opcode 76): nChars@1, drawable@4, gc@8, baseline x/y
+; at +12/+14, then padded STRING8 bytes at +16. The fixed public-domain
+; X.Org 6x13 font above supplies the QueryFont-advertised 6/11/2 metrics.
+;
+; Image text first paints the complete nChars*6 by 13 cell rectangle with
+; the GC background, then paints foreground glyph bits. Both phases honor
+; the GC's SetClipRectangles region and drawable bounds. Unsupported byte
+; values use DEFAULT_CHAR 0. A malformed length is rejected before any body
+; access, preserving the framing of the next request. Pixmap destinations
+; remain off-screen; window destinations receive bounded compositor damage.
+; ----------------------------------------------------------------------------
+handle_image_text8:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    sub rsp, 32
+    mov r12, rsi                             ; request
+    mov qword [cur_clip], 0
+
+    cmp edx, 16
+    jl .it_done
+    movzx eax, byte [r12 + 1]                ; nChars
+    mov [rsp + 12], eax
+    mov ecx, eax
+    add ecx, 3
+    and ecx, -4
+    add ecx, 16                              ; exact framed request size
+    cmp edx, ecx
+    jne .it_done
+    test eax, eax
+    jz .it_done                              ; zero-width image is a no-op
+
+    mov edi, [r12 + 8]
+    call gc_lookup
+    test rax, rax
+    jz .it_done
+    mov ecx, [rax + 4]
+    mov [rsp + 4], ecx                       ; foreground
+    mov ecx, [rax + 8]
+    mov [rsp + 8], ecx                       ; background
+
+    lea rcx, [gcs]
+    sub rax, rcx
+    shr rax, 4                               ; GC slot
+    imul rax, CLIP_ENTRY_SIZE
+    lea rcx, [gc_clips]
+    add rax, rcx
+    cmp dword [rax], 0                       ; count 0 = no clip
+    je .it_clip_ready
+    mov [cur_clip], rax
+.it_clip_ready:
+
+    mov edi, [r12 + 4]
+    call drawable_get_backing
+    test rax, rax
+    jz .it_done
+    mov rbx, rax                             ; backing
+    mov r13d, edx                            ; stride / width
+    mov r14d, ecx                            ; height
+    movsx r15d, word [r12 + 12]              ; cell x
+    movsx ebp, word [r12 + 14]               ; baseline y
+    sub ebp, CORE_FONT_ASCENT                 ; cell top
+    mov eax, [rsp + 12]
+    imul eax, CORE_FONT_WIDTH
+    mov [rsp + 0], eax                       ; image width
+
+    ; ImageText background semantics: paint every character cell first.
+    mov rdi, rbx
+    mov esi, r13d
+    mov edx, r14d
+    mov eax, r15d
+    mov r8d, ebp
+    mov r9d, [rsp + 0]
+    mov r10d, CORE_FONT_HEIGHT
+    mov r11d, [rsp + 8]
+    call clipped_fb_fill
+
+    mov rdi, rbx
+    mov esi, r13d
+    mov edx, r14d
+    mov eax, r15d
+    mov r8d, ebp
+    lea r9, [r12 + 16]
+    mov r10d, [rsp + 12]
+    mov r11d, [rsp + 4]
+    call core_text8_draw_run
+
+.it_damage:
+    mov edi, [r12 + 4]
+    call window_lookup
+    test rax, rax
+    jz .it_done                              ; pixmap: visible after a later copy
+    mov byte [comp_dirty], 1
+    mov rdi, rax
+    mov eax, r15d
+    mov edx, ebp
+    mov ecx, [rsp + 0]
+    mov r8d, CORE_FONT_HEIGHT
+    call damage_add_local
+.it_done:
+    mov qword [cur_clip], 0
+    add rsp, 32
+    pop rbp
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ----------------------------------------------------------------------------
+; core_text8_draw_run — rasterise one transparent fixed-font STRING8 run.
+;   rdi = backing, esi = stride/width, edx = height, eax = x, r8d = top y
+;   r9 = bytes, r10d = count, r11d = foreground
+; Honors [cur_clip] and drawable bounds. Unsupported bytes select the fixed
+; font's DEFAULT_CHAR 0. Preserves every callee-saved register; clobbers the
+; caller-saved integer registers.
+; ----------------------------------------------------------------------------
+core_text8_draw_run:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
+    sub rsp, 16
+    mov rbx, rdi                             ; backing
+    mov r12d, esi                            ; stride / width
+    mov r13d, edx                            ; height
+    mov r14d, eax                            ; run x
+    mov r15d, r8d                            ; top y
+    mov rbp, r9                              ; text bytes
+    mov [rsp + 0], r10d                      ; count
+    mov [rsp + 4], r11d                      ; foreground
+    mov dword [rsp + 8], 0                   ; character index
+.ct8_char:
+    mov eax, [rsp + 8]
+    cmp eax, [rsp + 0]
+    jge .ct8_done
+    mov r11d, eax
+    imul r11d, CORE_FONT_WIDTH
+    add r11d, r14d                           ; current cell x
+    movzx eax, byte [rbp + rax]
+    lea r10, [core_font_6x13_default]
+    cmp eax, CORE_FONT_ASCII_FIRST
+    jb .ct8_glyph_ready
+    cmp eax, CORE_FONT_ASCII_LAST
+    ja .ct8_glyph_ready
+    sub eax, CORE_FONT_ASCII_FIRST
+    imul eax, CORE_FONT_HEIGHT
+    lea r10, [core_font_6x13_ascii]
+    add r10, rax
+.ct8_glyph_ready:
+    xor r9d, r9d                             ; glyph row
+.ct8_row:
+    cmp r9d, CORE_FONT_HEIGHT
+    jge .ct8_next_char
+    xor r8d, r8d                             ; glyph column
+.ct8_column:
+    cmp r8d, CORE_FONT_WIDTH
+    jge .ct8_next_row
+    movzx eax, byte [r10 + r9]
+    mov ecx, 7
+    sub ecx, r8d
+    bt eax, ecx
+    jnc .ct8_next_column
+
+    mov edi, r11d
+    add edi, r8d                             ; drawable-local x
+    test edi, edi
+    js .ct8_next_column
+    cmp edi, r12d
+    jge .ct8_next_column
+    mov esi, r15d
+    add esi, r9d                             ; drawable-local y
+    test esi, esi
+    js .ct8_next_column
+    cmp esi, r13d
+    jge .ct8_next_column
+
+    cmp qword [cur_clip], 0
+    je .ct8_plot
+    call clip_test_point
+    test al, al
+    jz .ct8_next_column
+.ct8_plot:
+    mov eax, esi
+    imul eax, r12d
+    add eax, edi
+    mov ecx, [rsp + 4]
+    mov [rbx + rax*4], ecx
+.ct8_next_column:
+    inc r8d
+    jmp .ct8_column
+.ct8_next_row:
+    inc r9d
+    jmp .ct8_row
+.ct8_next_char:
+    inc dword [rsp + 8]
+    jmp .ct8_char
+.ct8_done:
+    add rsp, 16
     pop rbp
     pop r15
     pop r14

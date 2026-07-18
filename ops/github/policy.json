@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "axes": {
+    "type": {
+      "cardinality": "exactly-one",
+      "labels": ["enhancement", "bug", "tech-debt", "spike", "docs", "ci", "test"]
+    },
+    "priority": {
+      "cardinality": "exactly-one",
+      "labels": ["p0", "p1", "p2", "p3", "p4"]
+    },
+    "area": {
+      "cardinality": "one-or-more",
+      "labels": [
+        "assembly", "protocol", "compositor", "drm", "input", "render", "xkb",
+        "extensions", "build", "release", "security", "performance", "agents"
+      ]
+    },
+    "release": {
+      "cardinality": "exactly-one-when-milestoned",
+      "labels": ["release:major", "release:minor", "release:patch", "release:none"]
+    }
+  },
+  "issueTitlePattern": "^\\[(assembly|protocol|compositor|drm|input|render|xkb|extensions|build|release|security|performance|agents|epic:[a-z0-9-]+)\\] .+",
+  "pullRequestTitlePattern": "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-z0-9._/-]+\\))?!?: .+",
+  "rules": [
+    "Every open issue has exactly one type and priority label.",
+    "Every open issue has at least one area label.",
+    "Every issue committed to a milestone has exactly one release-impact label.",
+    "Every epic belongs to exactly one release milestone.",
+    "Every non-epic milestone issue names one parent epic in the same milestone.",
+    "p0 is reserved for an active security, data-loss, or operator emergency.",
+    "Hardware-affecting acceptance criteria are manual and never run on ordinary CI."
+  ]
+}

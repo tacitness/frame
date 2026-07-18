@@ -2,8 +2,9 @@
 
 <img src="img/frame.svg" align="left" width="150" height="150">
 
-![Version](https://img.shields.io/badge/version-0.0.141-blue)
-![Phase](https://img.shields.io/badge/phase-4%2F14-yellow)
+![Release](https://img.shields.io/github/v/release/tacitness/frame?display_name=tag&include_prereleases)
+![Status](https://img.shields.io/badge/status-experimental-yellow)
+[![CI](https://github.com/tacitness/frame/actions/workflows/ci.yml/badge.svg)](https://github.com/tacitness/frame/actions/workflows/ci.yml)
 ![Assembly](https://img.shields.io/badge/language-x86__64%20Assembly-purple)
 ![License](https://img.shields.io/badge/license-Unlicense-green)
 ![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-blue)
@@ -20,6 +21,11 @@ the whole [CHasm](https://github.com/isene/chasm) desktop plus
 arbitrary X clients — Firefox, VS Code, GIMP, Inkscape — all
 software-rendered, all on a stack written end-to-end in asm.
 
+> **Security status:** frame is experimental. Its Unix X11 socket is owner-only
+> (`0700`); setup authentication fields are not yet validated. Run clients as
+> the same unprivileged uid and do not treat it as a cross-user boundary; see
+> [Security](SECURITY.md).
+
 <br clear="left"/>
 
 ![pointer (the Fe2O3 file manager) running in glass on frame](img/pointer-on-frame.jpg)
@@ -30,7 +36,7 @@ software-rendered, all on a stack written end-to-end in asm.
 panel via DRM/KMS — two-pane layout, syntax-highlighted preview, colour,
 keyboard-driven. No libc, no Xlib, no Mesa anywhere in the path.*
 
-## Status: phase 4 of 14 (core protocol + compositor + drawing)
+## Status: experimental pre-1.0
 
 | # | Phase | Status |
 |---|-------|--------|
@@ -65,7 +71,7 @@ Phase 14 is the "Firefox runs on a 50k-line asm X server" milestone.
 
 ```bash
 make
-./frame                 # listens on display :7 (configurable: ./frame N)
+./frame 7 --noinput     # safe headless server on display :7
 DISPLAY=:7 xdpyinfo     # connects, gets setup reply, sends QueryExtension
 ```
 
@@ -78,9 +84,10 @@ emits a structurally valid setup reply describing:
   transparency)
 - One pixmap format (depth 24 in 32 bpp)
 
-Subsequent requests are logged to stderr (`req opcode=N len=M`) and
-silently dropped. Real dispatch lands in phase 4 once the wire is
-proven and the DRM backend is in.
+Core and extension requests listed in the roadmap dispatch to the current
+handlers. Unsupported requests are logged; reply-bearing support must be
+validated before it is considered compatible. The protocol test plan lives in
+[docs/TESTING.md](docs/TESTING.md).
 
 ## Phase 2: DRM/KMS probe
 
@@ -332,11 +339,44 @@ at the combined resolution if wallpaper-on-dual matters.
 Pure NASM, no libc, single static ELF. Following CHasm conventions:
 
 ```bash
-nasm -f elf64 frame.asm -o frame.o && ld frame.o -o frame
+make
+make quality
 ```
 
 State is BSS-allocated (no malloc). Per-client connection state lives
-in fixed slots; multi-client work in phase 4.
+in fixed slots with disjoint resource-ID bands and centralized cleanup.
+
+## Development and delivery
+
+The repository includes hardware-free unit, ELF/static, live protocol,
+regression, malformed-input, and reproducibility suites; versioned local hooks;
+hosted read-only CI; mandatory git-secrets plus Gitleaks protection; opt-in
+isolated self-hosted scanners; SonarQube external NASM policy; and
+signed-provenance release packaging.
+
+```bash
+make install-hooks       # enable versioned commit/push checks
+make quality             # canonical read-only developer gate
+make ci-local            # quality plus local security checks
+make bench-protocol      # informational headless latency benchmark
+```
+
+Start with:
+
+- [Contributing](CONTRIBUTING.md)
+- [Agent contract](AGENTS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Assembly standards](docs/ASSEMBLY_STANDARDS.md)
+- [Testing](docs/TESTING.md)
+- [Security model](docs/SECURITY_MODEL.md)
+- [X.Org source audit](docs/XORG_SOURCE_AUDIT.md)
+- [SonarQube](docs/SONARQUBE.md)
+- [CI/CD/RO and releases](docs/DELIVERY.md)
+- [Private ECR publishing](docs/ECR_PUBLISHING.md)
+- [Self-hosted runners](docs/SELF_HOSTED_RUNNERS.md)
+- [GitHub governance](docs/GITHUB_GOVERNANCE.md)
+- [Performance](docs/PERFORMANCE.md)
+- [Local reference notes](docs/REFERENCE_NOTES.md)
 
 ## License
 

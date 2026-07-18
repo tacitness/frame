@@ -1,0 +1,183 @@
+[
+  {
+    "id": "E01",
+    "slug": "assembly-foundation",
+    "title": "Assembly foundation and maintainability",
+    "milestone": "v0.1.0 - Safety and conformance foundation",
+    "priority": "p1",
+    "areas": ["assembly", "agents"],
+    "releaseImpact": "release:minor",
+    "status": "status:review",
+    "outcome": "A new maintainer or coding agent can change frame.asm safely using explicit NASM structure, ABI, style, review, and optimization contracts.",
+    "baseline": "frame is a large single-file freestanding NASM server with valuable inline history but no previously enforced repository-wide assembly or agent contract.",
+    "nonGoals": "A language rewrite, speculative instruction tuning, or splitting code before ownership and protocol boundaries are measured.",
+    "acceptance": [
+      "Assembly structure, naming, syscall, wire-layout, cleanup, and optimization rules are versioned and linted.",
+      "Agent instructions agree across Codex, Claude, Gemini, Copilot, and repository-local scopes.",
+      "Low-level optimization changes require repeatable measurements and regression evidence."
+    ]
+  },
+  {
+    "id": "E02",
+    "slug": "test-system",
+    "title": "Layered protocol and regression test system",
+    "milestone": "v0.1.0 - Safety and conformance foundation",
+    "priority": "p1",
+    "areas": ["protocol", "build"],
+    "releaseImpact": "release:minor",
+    "status": "status:review",
+    "outcome": "Every supported protocol and safety contract has a deterministic lowest-layer test, with malformed clients isolated from the server and other clients.",
+    "baseline": "The original repository relied primarily on manual execution and lacked a manifest connecting unit, integration, regression, fuzz, reproducibility, and hardware acceptance lanes.",
+    "nonGoals": "Opening DRM, evdev, KVM, or a live user display in ordinary tests or turning noisy performance numbers into PR gates.",
+    "acceptance": [
+      "Unit, static, headless integration, regression, malformed-input, reproducibility, and manual-hardware lanes are documented and runnable.",
+      "Every repaired defect gains a named regression and every server test proves socket/process cleanup.",
+      "The test manifest records ownership, hardware boundaries, commands, and implementation status."
+    ]
+  },
+  {
+    "id": "E03",
+    "slug": "secure-delivery",
+    "title": "Secure CI, SonarQube, packaging, and release provenance",
+    "milestone": "v0.1.0 - Safety and conformance foundation",
+    "priority": "p1",
+    "areas": ["build", "release", "security", "agents"],
+    "releaseImpact": "release:minor",
+    "status": "status:review",
+    "outcome": "Pull requests are read-only and reproducibly gated, while trusted releases produce scanned, signed, traceable native packages and OCI images without exposing infrastructure secrets.",
+    "baseline": "The source built locally but had no versioned hooks, hosted/self-hosted trust split, secret history scan, Sonar assembly policy, SBOM, image, ECR, or provenance workflow.",
+    "nonGoals": "Publishing from pull requests, sharing a host Docker socket, running privileged CI, or enabling ECR/Sonar/self-hosted jobs before their external resources are ready.",
+    "acceptance": [
+      "CI/CD/RO workflows, local hooks, runner safety checks, and quality gates are versioned and pinned.",
+      "git-secrets, Gitleaks, GitHub push protection, dependency review, and binary security scans run at the appropriate trust boundary.",
+      "SemVer tags produce checksums, SBOMs, OCI artifacts, scans, attestations, and approval-gated delivery."
+    ]
+  },
+  {
+    "id": "E04",
+    "slug": "core-conformance",
+    "title": "X11 core protocol conformance",
+    "milestone": "v0.2.0 - Core protocol completeness",
+    "priority": "p2",
+    "areas": ["protocol"],
+    "releaseImpact": "release:minor",
+    "status": "status:ready",
+    "outcome": "Supported core X11 requests, replies, errors, events, byte lengths, and sequence behavior match xorgproto and canonical X.Org semantics.",
+    "baseline": "frame implements a broad core subset, but handlers need a request-by-request conformance inventory and consistent malformed-stream behavior.",
+    "nonGoals": "Claiming full X11 conformance for unimplemented requests or adding isolated swapped-client behavior without an end-to-end design.",
+    "acceptance": [
+      "A machine-readable core opcode matrix records support, semantics, tests, and deliberate incompatibilities.",
+      "Every implemented variable-length request validates exact bounds and preserves client stream framing.",
+      "Replies, errors, events, and sequence numbers match canonical protocol evidence."
+    ]
+  },
+  {
+    "id": "E05",
+    "slug": "resource-lifecycle",
+    "title": "Multi-client resource ownership and lifecycle",
+    "milestone": "v0.2.0 - Core protocol completeness",
+    "priority": "p2",
+    "areas": ["protocol", "security"],
+    "releaseImpact": "release:minor",
+    "status": "status:ready",
+    "outcome": "Windows, pixmaps, GCs, fonts, cursors, selections, grabs, subscriptions, and extension state are isolated by client and reclaimed deterministically.",
+    "baseline": "Resource tables and disconnect paths exist, but each owner, capacity, cascade, and slot-reuse invariant needs explicit proof.",
+    "nonGoals": "Increasing fixed table sizes as a substitute for ownership, bounds, cleanup, or denial-of-service analysis.",
+    "acceptance": [
+      "Every resource type documents creation ownership, lookup authorization, dependency cascades, capacity failure, and disconnect cleanup.",
+      "Cross-client misuse returns a bounded protocol failure without corrupting either client.",
+      "Slot reuse is regression-tested with clean state after disconnect."
+    ]
+  },
+  {
+    "id": "E06",
+    "slug": "rendering",
+    "title": "Rendering and compositor correctness",
+    "milestone": "v0.3.0 - Rendering and compositing correctness",
+    "priority": "p2",
+    "areas": ["compositor", "render", "performance"],
+    "releaseImpact": "release:minor",
+    "status": "status:ready",
+    "outcome": "Core drawing, RENDER operations, backing storage, exposure, damage, stacking, and composition produce deterministic pixels with measured cost.",
+    "baseline": "The software compositor can display representative clients, but drawing semantics and repaint granularity remain uneven and active text workloads expose a memory-bandwidth hotspot.",
+    "nonGoals": "Optimizing away protocol correctness, hiding unsupported operators, or gating ordinary PRs on workstation timing noise.",
+    "acceptance": [
+      "Pixel-exact fixtures cover supported core and RENDER operations, clipping, overlap, alpha, and bounds.",
+      "Damage/exposure/stacking behavior is regression-tested across mapped window trees.",
+      "Representative workloads have repeatable CPU, memory, syscall, wakeup, and compositor-counter baselines."
+    ]
+  },
+  {
+    "id": "E07",
+    "slug": "input-xkb",
+    "title": "Synthetic input and XKB compatibility",
+    "milestone": "v0.4.0 - Input, XKB, and extension interoperability",
+    "priority": "p2",
+    "areas": ["input", "xkb"],
+    "releaseImpact": "release:minor",
+    "status": "status:ready",
+    "outcome": "Pointer, keyboard, focus, grabs, synthetic input, and XKB state support interactive desktop use without opening live input devices in automation.",
+    "baseline": "Core and extension input paths exist, while Firefox-class XKB compatibility and a complete synthetic interaction matrix remain unfinished.",
+    "nonGoals": "Reading /dev/input in CI, requiring root, or treating one US-layout happy path as XKB conformance.",
+    "acceptance": [
+      "A FIFO/socket-driven synthetic harness covers key, button, motion, focus, grab, drag, and resize flows.",
+      "XKB discovery, maps, state, events, and multiple representative layouts interoperate with toolkit clients.",
+      "Live evdev behavior is isolated to the manual hardware milestone."
+    ]
+  },
+  {
+    "id": "E08",
+    "slug": "extensions",
+    "title": "Extension interoperability and conformance",
+    "milestone": "v0.4.0 - Input, XKB, and extension interoperability",
+    "priority": "p2",
+    "areas": ["extensions", "protocol"],
+    "releaseImpact": "release:minor",
+    "status": "status:ready",
+    "outcome": "Advertised X11 extensions expose internally consistent versions, request sets, events, errors, resources, and cleanup behavior required by representative clients.",
+    "baseline": "frame advertises several extensions, but toolkit probes and real-client traces still encounter partial request families and placeholder semantics.",
+    "nonGoals": "Advertising extensions or versions that the server cannot safely service, or implementing unused surface area without trace/test evidence.",
+    "acceptance": [
+      "An extension matrix records advertised versions, opcodes, events, errors, clients, tests, and unsupported boundaries.",
+      "Toolkit and representative-client startup traces contain no reply-bearing deadlocks or stream desynchronization.",
+      "Extension resources and subscriptions are client-owned and reclaimed."
+    ]
+  },
+  {
+    "id": "E09",
+    "slug": "hardware",
+    "title": "DRM, evdev, hotplug, and recovery",
+    "milestone": "v0.5.0 - Hardware backend reliability",
+    "priority": "p2",
+    "areas": ["drm", "input"],
+    "releaseImpact": "release:minor",
+    "status": "status:blocked",
+    "outcome": "A human can start, switch away from, hotplug, interrupt, and stop frame on supported hardware without wedging input, DRM master, scanout, or the subsequent display server.",
+    "baseline": "DRM/KMS and evdev paths are present and documented, but hardware acceptance must be repeated on controlled TTYs with explicit recovery evidence.",
+    "nonGoals": "Autonomous hardware testing, privileged CI, opening live devices from hooks, or accepting a result without restore/recovery proof.",
+    "acceptance": [
+      "Every acquisition stage has signal/error cleanup and reverse-order restoration evidence.",
+      "Single/multi-output, page flip, VT switch, hotplug, device loss, and input unplug cases are manually recorded.",
+      "The original console/display server starts cleanly after every acceptance run."
+    ]
+  },
+  {
+    "id": "E10",
+    "slug": "desktop-compatibility",
+    "title": "Representative desktop and client compatibility",
+    "milestone": "v1.0.0 - Desktop compatibility",
+    "priority": "p1",
+    "areas": ["protocol", "render", "performance"],
+    "releaseImpact": "release:major",
+    "status": "status:ready",
+    "legacyIssueNumber": 1,
+    "outcome": "tswm, terminals, Firefox, and the declared representative client set are visually correct, interactive, recoverable, and measured on frame.",
+    "baseline": "tswm and xterm now reach a visible prompt through the headless compositor after implementing key core requests, while Firefox, complete interaction flows, and bare-console performance acceptance remain open.",
+    "nonGoals": "Calling a client supported because its first window maps, or presenting nested/headless benchmark numbers as bare-metal Xorg results.",
+    "acceptance": [
+      "tswm and xterm reach visual and interaction parity for the declared baseline session.",
+      "Firefox launches a local test profile and supports focus, move, resize, keyboard, pointer, close, and sustained rendering.",
+      "Matched control/frame sessions have reproducible performance evidence and explicit compatibility limitations."
+    ]
+  }
+]

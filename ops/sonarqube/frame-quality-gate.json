@@ -1,0 +1,25 @@
+{
+  "name": "Frame Assembly Gate",
+  "projectKey": "tacitness_frame",
+  "newCodeDefinition": {
+    "type": "PREVIOUS_VERSION"
+  },
+  "conditions": [
+    {
+      "metric": "new_violations",
+      "operator": "GT",
+      "error": "0",
+      "intent": "No new internal or frame-policy issues"
+    },
+    {
+      "metric": "new_security_hotspots_reviewed",
+      "operator": "LT",
+      "error": "100",
+      "intent": "All new security hotspots are reviewed"
+    }
+  ],
+  "deliberateOmissions": [
+    "Coverage is omitted until frame has trustworthy instruction and branch coverage.",
+    "Duplication is omitted because NASM is imported as text rather than a native Sonar language."
+  ]
+}

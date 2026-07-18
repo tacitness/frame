@@ -1,0 +1,64 @@
+name: Research Spike Specification
+description: Time-box protocol, implementation, compatibility, or performance research.
+title: "[area] "
+labels:
+  - spike
+  - p3
+  - needs-triage
+  - release:none
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        A spike produces evidence and a decision, not an open-ended implementation.
+  - type: input
+    id: question
+    attributes:
+      label: Decision this spike must unblock
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Existing code, protocol, and prior-art audit
+      placeholder: |
+        frame routines inspected:
+        xorgproto/Xserver source inspected:
+        local reference chapters inspected:
+        current uncertainty:
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Bounded method and time box
+      placeholder: |
+        Experiments/measurements:
+        Maximum effort:
+        Hardware or privilege boundaries:
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Required evidence and exit criteria
+      placeholder: |
+        - [ ] Reproducible notes or benchmark data.
+        - [ ] Recommended option and rejected alternatives.
+        - [ ] Follow-up issues with acceptance criteria, or a documented no-change decision.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic or backlog owner
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: I stated the decision, evidence standard, and stopping condition.
+          required: true

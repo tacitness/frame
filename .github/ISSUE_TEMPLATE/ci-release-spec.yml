@@ -1,0 +1,78 @@
+name: CI, Packaging, or Release Specification
+description: Change a workflow, runner, quality gate, package, image, or release path.
+title: "[build] "
+labels:
+  - ci
+  - p2
+  - build
+  - release
+  - needs-triage
+  - release:patch
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        CI/RO is the default. Untrusted pull requests never execute on self-hosted runners.
+  - type: textarea
+    id: current
+    attributes:
+      label: Current state and evidence
+      placeholder: "Workflow, runner label, artifact path, failure log, and commands inspected"
+    validations:
+      required: true
+  - type: textarea
+    id: desired
+    attributes:
+      label: Desired delivery contract
+      placeholder: |
+        Trigger and trust boundary:
+        Inputs and immutable versions:
+        Outputs and provenance:
+        Failure/rollback behavior:
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions, secrets, network, and runner isolation
+      placeholder: |
+        GitHub token permissions:
+        Secrets and environment:
+        Allowed network endpoints:
+        Runner labels/devices/sockets:
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation and acceptance criteria
+      placeholder: |
+        - [ ] actionlint and yamllint pass.
+        - [ ] Dry run or non-publishing path is proven.
+        - [ ] Checksums, SBOM, scanning, and attestations are verified as applicable.
+        - [ ] Publish permissions exist only in the final trusted job.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic and release milestone
+      placeholder: "E03 / #123; v0.1.0 - Safety and conformance foundation"
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Dependencies, non-goals, and rollback
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: I used immutable action/tool references and least privilege.
+          required: true
+        - label: I kept DRM, evdev, Docker sockets, and elevated identity out of ordinary CI.
+          required: true

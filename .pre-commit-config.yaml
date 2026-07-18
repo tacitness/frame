@@ -1,0 +1,63 @@
+---
+minimum_pre_commit_version: "4.0.0"
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+  - pre-push
+
+repos:
+  - repo: local
+    hooks:
+      - id: git-secrets
+        name: git-secrets staged credential scan
+        entry: scripts/git-secrets-scan.sh staged
+        language: system
+        pass_filenames: false
+      - id: text-hygiene
+        name: text hygiene
+        entry: python3 scripts/check-text.py
+        language: system
+        pass_filenames: false
+      - id: assembly-policy
+        name: NASM warnings and assembly policy
+        entry: scripts/lint-asm.sh frame.asm
+        language: system
+        pass_filenames: false
+        files: '(^frame\.asm$|^scripts/lint-asm\.sh$|^Makefile$)'
+      - id: shellcheck
+        name: ShellCheck
+        entry: shellcheck
+        language: system
+        types:
+          - shell
+      - id: yamllint
+        name: yamllint
+        entry: yamllint -c .yamllint.yml
+        language: system
+        types:
+          - yaml
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        pass_filenames: false
+        files: '^\.github/workflows/.*\.ya?ml$'
+      - id: protocol-smoke
+        name: headless X11 protocol smoke test
+        entry: make test
+        language: system
+        pass_filenames: false
+        files: '(^frame\.asm$|^tests/|^scripts/check-elf\.sh$|^Makefile$)'
+      - id: commit-message
+        name: commit message policy
+        entry: scripts/check-commit-message.sh
+        language: system
+        stages:
+          - commit-msg
+      - id: pre-push-parity
+        name: full local CI parity
+        entry: make ci-local
+        language: system
+        pass_filenames: false
+        stages:
+          - pre-push

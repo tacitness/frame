@@ -1,0 +1,210 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vMAJOR.MINOR.PATCH tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Validate release provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      FRAME_SELF_HOSTED_ENABLED: ${{ vars.FRAME_SELF_HOSTED_ENABLED }}
+      SONARQUBE_ENABLED: ${{ vars.SONARQUBE_ENABLED }}
+      ECR_ENABLED: ${{ vars.ECR_ENABLED }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Harden hosted runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Check out the release tag without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate tag, commit, and enabled gates
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$FRAME_SELF_HOSTED_ENABLED" == true ]] || { echo "Trusted runner is not enabled" >&2; exit 1; }
+          [[ "$SONARQUBE_ENABLED" == true ]] || { echo "SonarQube gate is not enabled" >&2; exit 1; }
+          [[ "$ECR_ENABLED" == true ]] || { echo "Required ECR publication is not enabled" >&2; exit 1; }
+          version="$(scripts/version.sh check "$RELEASE_TAG")"
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >>"$GITHUB_OUTPUT"
+
+  build:
+    name: Build, test, scan, and package
+    needs: preflight
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - frame-ci-build
+    environment: sonarqube
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the release tag without credentials
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+          clean: true
+
+      - name: Verify isolated release toolchain
+        run: scripts/check-toolchain.sh release
+
+      - name: Run all trusted quality and security gates
+        run: make ci-self-hosted
+
+      - name: Enforce SonarQube quality gate
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: make sonar VERSION="${{ needs.preflight.outputs.version }}"
+
+      - name: Build package, SBOMs, and OCI archive
+        env:
+          REQUIRE_CLEAN_SOURCE: "1"
+        run: make release-artifacts VERSION="${{ needs.preflight.outputs.version }}"
+
+      - name: Verify release checksums
+        run: cd dist && sha256sum -c SHA256SUMS
+
+      - name: Upload immutable release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frame-${{ needs.preflight.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Attest and publish
+    needs:
+      - preflight
+      - build
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Harden hosted publisher
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Download verified release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frame-${{ needs.preflight.outputs.version }}
+          path: dist
+
+      - name: Verify checksums after trust-boundary transfer
+        run: cd dist && sha256sum -c SHA256SUMS
+
+      - name: Create build provenance attestations
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: dist/*
+
+      - name: Validate ECR publication contract
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_ECR_PUBLISH_ROLE_ARN: ${{ vars.AWS_ECR_PUBLISH_ROLE_ARN }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          test -n "$AWS_REGION"
+          test -n "$AWS_ECR_PUBLISH_ROLE_ARN"
+          test -n "$ECR_REPOSITORY"
+          [[ "$ECR_REPOSITORY" == *.dkr.ecr.*.amazonaws.com/* ]]
+          command -v aws >/dev/null
+
+      - name: Publish versioned and immutable GHCR tags
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          archive="dist/frame-${VERSION}-linux-x86_64.oci.tar"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker load -i "$archive"
+          source="ghcr.io/tacitness/frame:${VERSION}"
+          docker tag "$source" "ghcr.io/tacitness/frame:sha-${GITHUB_SHA}"
+          docker tag "$source" "ghcr.io/tacitness/frame:latest"
+          docker push "$source"
+          docker push "ghcr.io/tacitness/frame:sha-${GITHUB_SHA}"
+          docker push "ghcr.io/tacitness/frame:latest"
+
+      - name: Exchange GitHub OIDC identity for scoped AWS credentials
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ECR_PUBLISH_ROLE_ARN }}
+          role-session-name: frame-release-${{ github.run_id }}
+
+      - name: Publish immutable version and commit tags to private ECR
+        shell: bash
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          registry="${ECR_REPOSITORY%%/*}"
+          repository="${ECR_REPOSITORY#*/}"
+          aws ecr get-login-password --region "$AWS_REGION" |
+            docker login --username AWS --password-stdin "$registry"
+          source="ghcr.io/tacitness/frame:${VERSION}"
+          version_ref="${ECR_REPOSITORY}:v${VERSION}"
+          sha_ref="${ECR_REPOSITORY}:sha-${GITHUB_SHA}"
+          docker tag "$source" "$version_ref"
+          docker tag "$source" "$sha_ref"
+          docker push "$version_ref"
+          docker push "$sha_ref"
+          version_digest="$(aws ecr describe-images --region "$AWS_REGION" \
+            --repository-name "$repository" --image-ids "imageTag=v${VERSION}" \
+            --query 'imageDetails[0].imageDigest' --output text)"
+          sha_digest="$(aws ecr describe-images --region "$AWS_REGION" \
+            --repository-name "$repository" --image-ids "imageTag=sha-${GITHUB_SHA}" \
+            --query 'imageDetails[0].imageDigest' --output text)"
+          test "$version_digest" = "$sha_digest"
+          echo "Published ${ECR_REPOSITORY}@${version_digest}"
+
+      - name: Create immutable GitHub release after registry publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+        run: gh release create "$RELEASE_TAG" dist/* --verify-tag --generate-notes --title "$RELEASE_TAG"

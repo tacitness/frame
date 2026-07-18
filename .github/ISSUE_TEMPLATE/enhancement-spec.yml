@@ -1,0 +1,104 @@
+name: Enhancement Specification
+description: Propose a capability with explicit protocol, safety, test, and release boundaries.
+title: "[area] "
+labels:
+  - enhancement
+  - p2
+  - needs-triage
+  - release:minor
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        Replace `[area]`, select canonical labels, and map this work to one epic and milestone.
+  - type: input
+    id: outcome
+    attributes:
+      label: Required outcome
+      placeholder: A client can perform X without blocking or corrupting another client.
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why this matters and current evidence
+      placeholder: |
+        User/client impact:
+        Current source behavior:
+        Existing implementation audited:
+        X.Org/xorgproto references:
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Wire, ABI, state, and error contract
+      description: Specify byte order, lengths, ownership, bounds, error cases, and cleanup.
+      placeholder: |
+        Request/reply/event fields:
+        State transition and ownership:
+        Bounds and overflow rules:
+        Errors and client isolation:
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope, non-goals, and safety constraints
+      placeholder: |
+        In scope:
+        Out of scope:
+        Privileges/devices forbidden in automation:
+        Compatibility constraints:
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Layered test plan
+      placeholder: |
+        Unit fixtures:
+        Static/directive checks:
+        Headless integration:
+        Regression/malformed corpus:
+        Manual hardware or performance evidence:
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Protocol and state invariants are documented.
+        - [ ] Boundary and malformed inputs are tested.
+        - [ ] make quality and SonarQube gate pass.
+        - [ ] Docs and compatibility matrix are updated.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic and release milestone
+      placeholder: "E06 / #123; v0.3.0 - Rendering and compositing correctness"
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and rollout
+      placeholder: |
+        Depends on:
+        Blocks:
+        Rollback or compatibility plan:
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: I audited existing frame code and canonical protocol behavior before proposing new structure.
+          required: true
+        - label: I included measurable done conditions and explicit non-goals.
+          required: true

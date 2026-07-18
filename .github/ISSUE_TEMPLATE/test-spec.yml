@@ -1,0 +1,81 @@
+name: Test or Regression Harness Specification
+description: Add protocol fixtures, structural checks, regressions, fuzz seeds, or hardware test plans.
+title: "[protocol] "
+labels:
+  - test
+  - p2
+  - needs-triage
+  - release:none
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        Prefer the lowest layer that proves the invariant. Routine tests must be deterministic,
+        bounded, headless, use a temporary HOME, and pass `--noinput`.
+  - type: textarea
+    id: invariant
+    attributes:
+      label: Invariant or regression being protected
+      placeholder: "Protocol section, source routine, prior defect, or failure signature"
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Primary test layer
+      options:
+        - Unit wire fixture
+        - Static directive or ELF contract
+        - Headless server integration
+        - Regression
+        - Bounded malformed-input corpus
+        - Performance benchmark
+        - Manual hardware acceptance
+    validations:
+      required: true
+  - type: textarea
+    id: cases
+    attributes:
+      label: Positive, boundary, malformed, and cleanup cases
+      placeholder: |
+        Happy path:
+        Minimum/maximum boundary:
+        Truncation/overflow/wrong byte order:
+        Multi-client isolation:
+        Cleanup/restart behavior:
+    validations:
+      required: true
+  - type: textarea
+    id: oracle
+    attributes:
+      label: Test oracle, determinism, and failure diagnostics
+      description: Explain what constitutes success without relying on timing or live hardware.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and commands
+      placeholder: |
+        - [ ] Test fails for the known-bad behavior.
+        - [ ] Test passes repeatedly after the change.
+        - [ ] make test and make test-reproducible pass.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic and release milestone
+      placeholder: "E02 / #123; v0.1.0 - Safety and conformance foundation"
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: The automated case cannot open DRM or evdev, take DRM master, or use a live display.
+          required: true
+        - label: Corpus inputs and loops have explicit size and time bounds.
+          required: true

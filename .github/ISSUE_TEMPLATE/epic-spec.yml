@@ -1,0 +1,84 @@
+name: Release Epic Specification
+description: Define a parent outcome and map child issues to exactly one release milestone.
+title: "[epic:slug] E## - "
+labels:
+  - enhancement
+  - epic
+  - p2
+  - needs-triage
+  - release:minor
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        Use the next ID and slug from `ops/github/epics.json`. Assign exactly one milestone.
+        Every child issue must name this issue and use the same milestone.
+  - type: input
+    id: outcome
+    attributes:
+      label: Release-level outcome
+      placeholder: A bounded capability that users or maintainers can verify at the milestone.
+    validations:
+      required: true
+  - type: textarea
+    id: baseline
+    attributes:
+      label: Current state, evidence, and gap
+      placeholder: |
+        Existing implementation:
+        Protocol/source evidence:
+        Test/compatibility evidence:
+        Gap to outcome:
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope, non-goals, invariants, and safety boundaries
+    validations:
+      required: true
+  - type: textarea
+    id: children
+    attributes:
+      label: Ordered child issue map
+      description: Use GitHub task-list or sub-issue syntax and state dependencies explicitly.
+      placeholder: |
+        - [ ] #N foundation (blocks #N)
+        - [ ] #N implementation
+        - [ ] #N regressions and documentation
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: Epic acceptance and release gates
+      placeholder: |
+        - [ ] Every child issue is closed or explicitly removed from scope.
+        - [ ] make quality, security scans, and SonarQube pass.
+        - [ ] Compatibility/performance/security evidence is recorded.
+        - [ ] Release notes and rollback limitations are documented.
+    validations:
+      required: true
+  - type: input
+    id: milestone
+    attributes:
+      label: Exact release milestone
+      placeholder: "v0.2.0 - Core protocol completeness"
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Dependencies, risks, and deferred work
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: This epic maps to one milestone and has measurable release-level done conditions.
+          required: true
+        - label: Child work is ordered, independently testable, and does not hide hardware safety requirements.
+          required: true

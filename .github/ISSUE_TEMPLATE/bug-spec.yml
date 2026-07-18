@@ -1,0 +1,90 @@
+name: Bug or Regression Specification
+description: Report incorrect behavior with reproducible evidence and a regression-test plan.
+title: "[area] "
+labels:
+  - bug
+  - p2
+  - needs-triage
+  - release:patch
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        Replace `[area]` with a canonical area. Add an area label, release milestone,
+        and parent epic before implementation begins. Never attach secrets or private logs.
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior and evidence
+      description: Include exact output, protocol bytes, exit status, commit, and environment.
+      placeholder: |
+        Commit/version:
+        Command or request bytes:
+        Observed result:
+        Relevant sanitized logs:
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Cite the X11/kernel contract or established frame behavior when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      placeholder: |
+        1. Build with ...
+        2. Start headlessly with ...
+        3. Send/observe ...
+      description: State explicitly if reproduction touches DRM, evdev, or a live display.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Scope, safety boundaries, and suspected cause
+      placeholder: |
+        In scope:
+        Out of scope:
+        Hardware/privilege impact:
+        Suspected source labels or routines:
+    validations:
+      required: true
+  - type: textarea
+    id: regression
+    attributes:
+      label: Regression test and acceptance criteria
+      placeholder: |
+        - [ ] Add a failing test at the lowest useful layer.
+        - [ ] Prove the test passes after the fix.
+        - [ ] Run make quality.
+        - [ ] Verify no hardware access in automated tests.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic and release milestone
+      placeholder: "E04 / #123; v0.2.0 - Core protocol completeness"
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and related work
+      placeholder: "Blocked by #N; related to #N; or none"
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: I removed credentials, personal data, and private environment details.
+          required: true
+        - label: I identified whether the regression test is unit, static, integration, fuzz, or manual hardware.
+          required: true

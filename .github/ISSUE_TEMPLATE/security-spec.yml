@@ -1,0 +1,69 @@
+name: Public Security Hardening Specification
+description: Plan non-sensitive hardening. Use a private advisory for exploitable vulnerabilities.
+title: "[security] "
+labels:
+  - bug
+  - security
+  - p1
+  - needs-triage
+  - release:patch
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- sdd-spec-version: 1.1 -->
+        Stop and use a private security advisory if this form would disclose an exploit,
+        credential, private system, or unpatched vulnerability.
+  - type: textarea
+    id: assets
+    attributes:
+      label: Assets, trust boundaries, and attacker capability
+      placeholder: |
+        Assets:
+        Trusted/untrusted inputs:
+        Local/remote capability:
+        Required privileges:
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Sanitized risk and current controls
+      description: Do not include exploit instructions for an unpatched vulnerability.
+    validations:
+      required: true
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Proposed prevention, detection, and recovery
+      placeholder: |
+        Prevent:
+        Detect:
+        Contain/recover:
+        Compatibility cost:
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Negative tests and acceptance criteria
+      placeholder: |
+        - [ ] Malformed/unauthorized input is rejected safely.
+        - [ ] Other clients and server remain available.
+        - [ ] Scanner and SonarQube gates pass.
+        - [ ] Disclosure/rollout steps are recorded if applicable.
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic and release milestone
+    validations:
+      required: true
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure safety
+      options:
+        - label: This public issue does not expose a usable exploit, secret, or private infrastructure detail.
+          required: true
