@@ -95,6 +95,24 @@ class GovernanceTests(unittest.TestCase):
         bootstrap = (ROOT / "scripts/github-bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("contents/.github/workflows/ci.yml?ref=main", bootstrap)
 
+    def test_ci_bootstrap_uses_published_actionlint_asset_and_safe_policy_fallback(
+        self,
+    ) -> None:
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        metadata = (ROOT / ".github/workflows/metadata.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("actionlint_1.7.12_linux_amd64.tar.gz", ci)
+        self.assertNotIn("actionlint_1.7.12_linux_x86_64.tar.gz", ci)
+        self.assertIn("github.event.pull_request.base.sha", metadata)
+        self.assertIn("The policy-introduction PR has no validator", metadata)
+        self.assertIn("len(title) > 72", metadata)
+
+        secrets_scan = (ROOT / "scripts/git-secrets-scan.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("--quiet", secrets_scan)
+
     def test_implemented_test_suites_are_hardware_free(self) -> None:
         manifest = json.loads((ROOT / "tests/manifest.json").read_text(encoding="utf-8"))
         implemented = [

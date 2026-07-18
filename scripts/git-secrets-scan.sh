@@ -32,10 +32,10 @@ run_quietly() {
 
 case "$mode" in
     staged)
-        run_quietly --scan --cached --quiet
+        run_quietly --scan --cached
         ;;
     tree)
-        run_quietly --scan --untracked --quiet
+        run_quietly --scan --untracked
         ;;
     history)
         run_quietly --scan-history
@@ -45,10 +45,10 @@ case "$mode" in
             echo "git-secrets message scan requires a commit-message file" >&2
             exit 1
         }
-        run_quietly --scan --quiet -- "$message_file"
+        run_quietly --scan -- "$message_file"
         ;;
     all)
-        run_quietly --scan --untracked --quiet
+        run_quietly --scan --untracked
         run_quietly --scan-history
         ;;
     *)

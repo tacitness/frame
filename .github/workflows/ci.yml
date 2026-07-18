@@ -35,7 +35,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y nasm shellcheck yamllint
-          archive=actionlint_1.7.12_linux_x86_64.tar.gz
+          archive=actionlint_1.7.12_linux_amd64.tar.gz
           url="https://github.com/rhysd/actionlint/releases/download/v1.7.12/$archive"
           curl -fsSLO "$url"
           echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $archive" |
