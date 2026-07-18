@@ -13,16 +13,27 @@ from pathlib import Path
 
 from tests.lib.x11 import SetupReply, receive_setup, setup_request
 
+SOCKET_DIRECTORY = Path("/tmp/.X11-unix")
+
 
 class FrameServer:
     def __init__(self, binary: Path):
         self.binary = binary.resolve()
         self.root = self.binary.parent
         self.display = self._available_display()
-        self.socket_path = Path(f"/tmp/.X11-unix/X{self.display}")
+        self.socket_path = self._socket_path(self.display)
         self._home: tempfile.TemporaryDirectory[str] | None = None
         self._log = None
         self.process: subprocess.Popen[bytes] | None = None
+
+    @staticmethod
+    def _socket_path(display: int) -> Path:
+        return SOCKET_DIRECTORY / f"X{display}"
+
+    @staticmethod
+    def _ensure_socket_directory() -> None:
+        SOCKET_DIRECTORY.mkdir(mode=0o1777, parents=True, exist_ok=True)
+        SOCKET_DIRECTORY.chmod(0o1777)
 
     @staticmethod
     def _available_display(excluded: set[int] | None = None) -> int:
@@ -32,14 +43,12 @@ class FrameServer:
         start = secrets.randbelow(span)
         for offset in range(256):
             display = minimum + (start + offset) % span
-            if (
-                display not in excluded
-                and not Path(f"/tmp/.X11-unix/X{display}").exists()
-            ):
+            if display not in excluded and not FrameServer._socket_path(display).exists():
                 return display
         raise RuntimeError("no isolated X11 display number available")
 
     def start(self) -> "FrameServer":
+        self._ensure_socket_directory()
         self._home = tempfile.TemporaryDirectory(prefix="frame-test-home-")
         self._log = tempfile.TemporaryFile()
         attempted: set[int] = set()
@@ -47,7 +56,7 @@ class FrameServer:
             for attempt in range(10):
                 if attempt:
                     self.display = self._available_display(attempted)
-                    self.socket_path = Path(f"/tmp/.X11-unix/X{self.display}")
+                    self.socket_path = self._socket_path(self.display)
                     self._log.seek(0)
                     self._log.truncate()
                 attempted.add(self.display)
