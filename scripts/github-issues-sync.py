@@ -360,7 +360,6 @@ def needs_update(
             (current.get("body") or "") != body,
             current_labels(current) != set(labels),
             current_milestone != milestone_number,
-            current.get("state") != "open",
         )
     )
 
@@ -400,7 +399,6 @@ def update_issue(
             "body": body,
             "labels": labels,
             "milestone": milestone_number,
-            "state": "open",
         },
     )
 

@@ -90,7 +90,7 @@ make github-issues
 ```
 
 The synchronizer uses stable `frame-work-item` markers, adopts the declared legacy issue numbers, and updates rather than duplicates
-existing work. It never closes or deletes issues.
+existing work. It never closes, reopens, or deletes issues.
 
 After workflows are merged to remote `main`, install/update the branch ruleset:
 
