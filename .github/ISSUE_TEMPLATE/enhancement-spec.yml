@@ -12,6 +12,17 @@ body:
       value: |
         <!-- sdd-spec-version: 1.1 -->
         Replace `[area]`, select canonical labels, and map this work to one epic and milestone.
+  - type: textarea
+    id: repository
+    attributes:
+      label: Repository & System Clarity
+      placeholder: |
+        Repository: tacitness/frame
+        tsctl key: frame
+        System/subdomain:
+        Protocol/API authority:
+    validations:
+      required: true
   - type: input
     id: outcome
     attributes:
@@ -22,7 +33,7 @@ body:
   - type: textarea
     id: rationale
     attributes:
-      label: Why this matters and current evidence
+      label: Existing System Audit
       placeholder: |
         User/client impact:
         Current source behavior:
@@ -45,7 +56,7 @@ body:
   - type: textarea
     id: scope
     attributes:
-      label: Scope, non-goals, and safety constraints
+      label: Implementation Constraints
       placeholder: |
         In scope:
         Out of scope:
@@ -56,7 +67,7 @@ body:
   - type: textarea
     id: tests
     attributes:
-      label: Layered test plan
+      label: Testing Strategy
       placeholder: |
         Unit fixtures:
         Static/directive checks:
@@ -86,7 +97,7 @@ body:
   - type: textarea
     id: dependencies
     attributes:
-      label: Dependencies and rollout
+      label: Related Issues & Blockers
       placeholder: |
         Depends on:
         Blocks:

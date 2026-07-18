@@ -14,6 +14,27 @@ body:
         Prefer the lowest layer that proves the invariant. Routine tests must be deterministic,
         bounded, headless, use a temporary HOME, and pass `--noinput`.
   - type: textarea
+    id: repository
+    attributes:
+      label: Repository & System Clarity
+      placeholder: |
+        Repository: tacitness/frame
+        tsctl key: frame
+        System/subdomain:
+        Protocol/API authority:
+    validations:
+      required: true
+  - type: textarea
+    id: audit
+    attributes:
+      label: Existing System Audit
+      placeholder: |
+        Existing tests and source inspected:
+        Current coverage gap:
+        Prior failure evidence:
+    validations:
+      required: true
+  - type: textarea
     id: invariant
     attributes:
       label: Invariant or regression being protected
@@ -56,7 +77,7 @@ body:
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance criteria and commands
+      label: Testing Strategy
       placeholder: |
         - [ ] Test fails for the known-bad behavior.
         - [ ] Test passes repeatedly after the change.
@@ -66,14 +87,14 @@ body:
   - type: input
     id: epic
     attributes:
-      label: Parent epic and release milestone
+      label: Related Issues & Blockers
       placeholder: "E02 / #123; v0.1.0 - Safety and conformance foundation"
     validations:
       required: true
   - type: checkboxes
     id: safety
     attributes:
-      label: Safety
+      label: Implementation Constraints
       options:
         - label: The automated case cannot open DRM or evdev, take DRM master, or use a live display.
           required: true

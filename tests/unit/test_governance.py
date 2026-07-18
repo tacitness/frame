@@ -14,6 +14,20 @@ assert SPEC and SPEC.loader
 VALIDATOR = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VALIDATOR)
 
+SYNC_SPEC = importlib.util.spec_from_file_location(
+    "github_issues_sync", ROOT / "scripts" / "github-issues-sync.py"
+)
+assert SYNC_SPEC and SYNC_SPEC.loader
+ISSUE_SYNC = importlib.util.module_from_spec(SYNC_SPEC)
+SYNC_SPEC.loader.exec_module(ISSUE_SYNC)
+
+SDD_SECTIONS = (
+    "Repository & System Clarity",
+    "Existing System Audit",
+    "Testing Strategy",
+    "Related Issues & Blockers",
+)
+
 
 class GovernanceTests(unittest.TestCase):
     def test_valid_planned_issue(self) -> None:
@@ -83,6 +97,32 @@ class GovernanceTests(unittest.TestCase):
         self.assertTrue(
             all(any(issue["epic"] == epic_id for issue in issues) for epic_id in epic_ids)
         )
+
+    def test_catalog_and_issue_forms_are_dispatch_compatible_sdd_v11(self) -> None:
+        epics, issues = ISSUE_SYNC.load_catalog()
+        epic_by_id = {epic["id"]: epic for epic in epics}
+        issue_numbers: dict[str, int] = {}
+
+        rendered = [
+            ISSUE_SYNC.render_epic(
+                epic,
+                [issue for issue in issues if issue["epic"] == epic["id"]],
+                issue_numbers,
+            )
+            for epic in epics
+        ]
+        rendered.extend(
+            ISSUE_SYNC.render_issue(issue, epic_by_id[issue["epic"]], issue_numbers)
+            for issue in issues
+        )
+        for body in rendered:
+            for section in SDD_SECTIONS:
+                self.assertIn(f"## {section}", body)
+
+        for template in (ROOT / ".github/ISSUE_TEMPLATE").glob("*-spec.yml"):
+            content = template.read_text(encoding="utf-8")
+            for section in SDD_SECTIONS:
+                self.assertIn(f"label: {section}", content, template.name)
 
     def test_default_branch_governance_targets_main(self) -> None:
         ruleset = json.loads(

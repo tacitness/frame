@@ -230,11 +230,13 @@ def render_epic(
 - System/subdomain: freestanding x86-64 NASM X11 display server
 - Protocol authority: https://www.x.org/releases/current/doc/xproto/x11protocol.html
 
-## Current state, evidence, and gap
+## Existing System Audit
 
 {epic['baseline']}
 
-## Scope, invariants, and non-goals
+Relevant versioned sources: `frame.asm`, `AGENTS.md`, `docs/`, `tests/`, `ops/github/`, and the canonical X.Org/xorgproto references named by the epic.
+
+## Implementation Constraints
 
 - Preserve client isolation, exact wire framing, deterministic cleanup, and hardware safety.
 - Non-goal: {epic['nonGoals']}
@@ -252,11 +254,18 @@ def render_epic(
 - [ ] Security, SonarQube, compatibility, performance, and manual evidence required by this milestone is attached.
 - [ ] Release notes, known limitations, rollback, and recovery requirements are documented.
 
+## Testing Strategy
+
+```sh
+make quality
+make ci-local
+```
+
 ## Exact release milestone
 
 `{epic['milestone']}`
 
-## Dependencies, risks, and deferred work
+## Related Issues & Blockers
 
 - Child dependencies are authoritative in their own issue bodies and native sub-issue links.
 - Hardware-affecting acceptance remains human-controlled from a recoverable TTY.
@@ -303,17 +312,17 @@ Relevant versioned sources: `frame.asm`, `AGENTS.md`, `docs/`, `tests/`, `ops/gi
 - [ ] Source, tests, documentation, compatibility status, and diagnostics agree.
 - [ ] `make quality` passes; implementation work also completes `make ci-local` or records the exact external blocker.
 
-## Testing strategy
+## Testing Strategy
 
 ```sh
 {tests}
 ```
 
-## Related issues and blockers
+## Related Issues & Blockers
 
 {bullet_list(dependencies)}
 
-## Implementation constraints and safety
+## Implementation Constraints
 
 - Validate every client-controlled length, count, ID, state transition, syscall result, and cleanup edge before use.
 - Automated runs use an isolated numeric display, temporary `HOME`, and `--noinput`.

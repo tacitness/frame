@@ -12,6 +12,17 @@ body:
       value: |
         <!-- sdd-spec-version: 1.1 -->
         A spike produces evidence and a decision, not an open-ended implementation.
+  - type: textarea
+    id: repository
+    attributes:
+      label: Repository & System Clarity
+      placeholder: |
+        Repository: tacitness/frame
+        tsctl key: frame
+        System/subdomain:
+        Protocol/API authority:
+    validations:
+      required: true
   - type: input
     id: question
     attributes:
@@ -21,7 +32,7 @@ body:
   - type: textarea
     id: evidence
     attributes:
-      label: Existing code, protocol, and prior-art audit
+      label: Existing System Audit
       placeholder: |
         frame routines inspected:
         xorgproto/Xserver source inspected:
@@ -32,11 +43,22 @@ body:
   - type: textarea
     id: method
     attributes:
-      label: Bounded method and time box
+      label: Testing Strategy
       placeholder: |
         Experiments/measurements:
         Maximum effort:
         Hardware or privilege boundaries:
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Implementation Constraints
+      placeholder: |
+        Time box:
+        Hardware/privilege boundary:
+        Data and disclosure boundary:
+        Explicit non-goals:
     validations:
       required: true
   - type: textarea
@@ -52,7 +74,7 @@ body:
   - type: input
     id: epic
     attributes:
-      label: Parent epic or backlog owner
+      label: Related Issues & Blockers
     validations:
       required: true
   - type: checkboxes

@@ -14,9 +14,20 @@ body:
         Replace `[area]` with a canonical area. Add an area label, release milestone,
         and parent epic before implementation begins. Never attach secrets or private logs.
   - type: textarea
+    id: repository
+    attributes:
+      label: Repository & System Clarity
+      placeholder: |
+        Repository: tacitness/frame
+        tsctl key: frame
+        System/subdomain:
+        Protocol/API authority:
+    validations:
+      required: true
+  - type: textarea
     id: observed
     attributes:
-      label: Observed behavior and evidence
+      label: Existing System Audit
       description: Include exact output, protocol bytes, exit status, commit, and environment.
       placeholder: |
         Commit/version:
@@ -46,7 +57,7 @@ body:
   - type: textarea
     id: boundaries
     attributes:
-      label: Scope, safety boundaries, and suspected cause
+      label: Implementation Constraints
       placeholder: |
         In scope:
         Out of scope:
@@ -57,7 +68,7 @@ body:
   - type: textarea
     id: regression
     attributes:
-      label: Regression test and acceptance criteria
+      label: Testing Strategy
       placeholder: |
         - [ ] Add a failing test at the lowest useful layer.
         - [ ] Prove the test passes after the fix.
@@ -75,7 +86,7 @@ body:
   - type: textarea
     id: dependencies
     attributes:
-      label: Dependencies and related work
+      label: Related Issues & Blockers
       placeholder: "Blocked by #N; related to #N; or none"
     validations:
       required: true

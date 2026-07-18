@@ -15,6 +15,17 @@ body:
         Stop and use a private security advisory if this form would disclose an exploit,
         credential, private system, or unpatched vulnerability.
   - type: textarea
+    id: repository
+    attributes:
+      label: Repository & System Clarity
+      placeholder: |
+        Repository: tacitness/frame
+        tsctl key: frame
+        System/subdomain:
+        Protocol/API authority:
+    validations:
+      required: true
+  - type: textarea
     id: assets
     attributes:
       label: Assets, trust boundaries, and attacker capability
@@ -28,14 +39,14 @@ body:
   - type: textarea
     id: risk
     attributes:
-      label: Sanitized risk and current controls
+      label: Existing System Audit
       description: Do not include exploit instructions for an unpatched vulnerability.
     validations:
       required: true
   - type: textarea
     id: mitigation
     attributes:
-      label: Proposed prevention, detection, and recovery
+      label: Implementation Constraints
       placeholder: |
         Prevent:
         Detect:
@@ -46,7 +57,7 @@ body:
   - type: textarea
     id: verification
     attributes:
-      label: Negative tests and acceptance criteria
+      label: Testing Strategy
       placeholder: |
         - [ ] Malformed/unauthorized input is rejected safely.
         - [ ] Other clients and server remain available.
@@ -57,7 +68,7 @@ body:
   - type: input
     id: epic
     attributes:
-      label: Parent epic and release milestone
+      label: Related Issues & Blockers
     validations:
       required: true
   - type: checkboxes
