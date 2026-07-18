@@ -4,6 +4,7 @@ import importlib.util
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -134,6 +135,31 @@ class GovernanceTests(unittest.TestCase):
         )
         bootstrap = (ROOT / "scripts/github-bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("contents/.github/workflows/ci.yml?ref=main", bootstrap)
+
+    def test_issue_sync_preserves_closed_state(self) -> None:
+        current = {
+            "number": 12,
+            "title": "[assembly] Governed work",
+            "body": "governed body",
+            "labels": [{"name": "enhancement"}, {"name": "assembly"}],
+            "milestone": {"number": 1},
+            "state": "closed",
+        }
+        expected = {
+            "title": current["title"],
+            "body": current["body"],
+            "labels": ["enhancement", "assembly"],
+            "milestone_number": 1,
+        }
+        self.assertFalse(ISSUE_SYNC.needs_update(current, **expected))
+        self.assertTrue(
+            ISSUE_SYNC.needs_update(current, **{**expected, "body": "updated body"})
+        )
+
+        with patch.object(ISSUE_SYNC, "run_json", return_value={}) as run_json:
+            ISSUE_SYNC.update_issue(current, **{**expected, "body": "updated body"})
+        payload = run_json.call_args.args[1]
+        self.assertNotIn("state", payload)
 
     def test_ci_bootstrap_uses_published_actionlint_asset_and_safe_policy_fallback(
         self,
